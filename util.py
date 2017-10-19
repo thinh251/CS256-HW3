@@ -20,7 +20,7 @@ def sticks_with(u,v):
             if U[i] == 'D':
                 if V[i] != 'B':
                     return 0
-        return 1;
+        return 1
 
 
 def get_correct_match(u):
