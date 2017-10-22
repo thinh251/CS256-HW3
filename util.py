@@ -83,10 +83,3 @@ def read_data(data_folder):
                     # TODO:
                     something.append([line, t])
     return something
-
-
-
-
-
-
-

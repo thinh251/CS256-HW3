@@ -23,21 +23,26 @@ for i in range(num_snippets):
     #then do the mutations
     gene_code = []
     for element in first_rand: # Generates letters for first 20 chars
-        gene_code.append(letters[ele])
+        gene_code.append(letters[element])
     #generating the second half to make the string palindrome
     gene_code_str = ''.join(gene_code) + ''.join(reversed(gene_code))
     for j in range(from_ends,len(gene_code_str)-from_ends):#generates letters till
         # does the 50% mutation on the further than from_end distance
         random_float = np.random.uniform()
         if random_float <= 0.5 :
-            gene_code_str.replace(j,util.mutation(gene_code_str[j]))
+            letter = util.mutation(gene_code_str[j])
+            if j<0: j=j+len(gene_code_str) #getting rid of negative index
+            # becaasue it is messing up the below replacment
+            gene_code_str = gene_code_str[:j] + letter + gene_code_str[j+1:]
     for j in range(-from_ends,from_ends): # generates letters from from ends till
         # first and last sections when within the distance from start and end
         random_float = np.random.uniform()
         if random_float <= mutation_rate :
-            gene_code_str.replace(j,util.mutation(gene_code_str[j]))
-
-
+            letter = util.mutation(gene_code_str[j])
+            if j<0: j=j+len(gene_code_str) #getting rid of negative index
+            # becaasue it is messing up the below replacment
+            gene_code_str = gene_code_str[:j] + letter + gene_code_str[j+1:]
+    print "stage "+gene_code_str+" end"
     output = output + gene_code_str+'\n'
 
 print output
