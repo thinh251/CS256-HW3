@@ -40,7 +40,6 @@ for i in range(num_snippets):
             if j<0: j=j+len(gene_code_str) #getting rid of negative index
             # becaasue it is messing up the below replacment
             gene_code_str = gene_code_str[:j] + letter + gene_code_str[j+1:]
-    print "stage "+gene_code_str+" end"
     output = output + gene_code_str+'\n'
 
 print output
