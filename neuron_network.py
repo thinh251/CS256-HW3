@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import util
 
 
 class NeuronNetwork(object):
@@ -53,6 +54,7 @@ class NeuronNetwork(object):
             'out': tf.Variable(tf.truncated_normal(self.num_labels))
         }
 
+
     def __build_network(self, x, w, b):
         """ Define 5 layers for this homework.
             x is inputs, w: weight, b: bias
@@ -76,7 +78,19 @@ class NeuronNetwork(object):
         return output_layer
 
 
-    def train(self, train_x, train_y):
+    def start(self, mode, model_file, data_folder):
+        x, y = util.read_data(data_folder)
+        if mode == 'train':
+            # TODO:
+            # Assign random weight and bias for train only mode??
+            self.train(x, y, model_file)
+        elif mode == '5fold':
+            self.kfold(x, y, 5, model_file)
+        elif mode == 'test':
+            self.test(x, y, model_file)
+
+
+    def train(self, train_x, train_y, model_file):
         x = tf.placeholder(tf.float32, [None, len(self.input)])
         W = tf.Variable(tf.zeros([len(self.input)], self.num_labels))
         b = tf.Variable(tf.zeros(self.num_labels))
@@ -101,6 +115,34 @@ class NeuronNetwork(object):
                 session.run(optimizer, feed_dict={x: train_x, self.y_known: train_y})
                 cost = session.run(cost, feed_dict={x: train_x, self.y_known: train_y})
                 # y_predict = session.run(self.nn_output, feed_dict=)
+        # TODO: add detail to util.write_weights_file
+        util.write_weights_file(model_file, W)
+
+    def kfold(self, x, y, k, model_file):
+        # TODO
+        """Split the input data into k parts and do cross-validation for these
+        part
+        """
+        # Can we use scipy library or we have to split data set manually?
+        xi = np.hsplit(x, k)
+        yi = np.hsplit(y, k)
+
+        for i in range(len(xi)):
+            test_x = xi[i]
+            test_y = yi[i]
+
+    def test(self, x, y, model_file):
+        #TODO
+        w = util.read_weights_from(model_file)
+        if None != w:
+            self.weights['hidden_1'].assign(w[0])
+            self.weights['hidden_2'].assign(w[1])
+            self.weights['hidden_3'].assign(w[2])
+            self.weights['hidden_4'].assign(w[3])
+            self.weights['hidden_5'].assign(w[4])
+            self.test(x, y)
+        else:
+            raise IOError('Weight can not be loaded from model file')
 
     def read_data(self, model_file):
         #  TODO: This function should parse model data file and return the
