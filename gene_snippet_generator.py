@@ -3,6 +3,7 @@ import sys
 import util
 
 gene_len = 40
+
 if len(sys.argv) < 5:
     sys.exit("gene_snippet_generator takes 5 arguments.")
 try:
