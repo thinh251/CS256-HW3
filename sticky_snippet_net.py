@@ -60,8 +60,6 @@ def determine_sticky(input_str):
 if __name__ == "__main__":
     # Test
     input_str = "BACBDCBDBBACBACDADDCABBCBACDACDDBDABDACD"
-    #  Test STICK_PALINDROME
-    # input_str = "BACBDCBDBBACBACDADDCABBCBACDACDDBDABDACD"
     result = determine_sticky(input_str)
     print (result)
     # args = sys.argv

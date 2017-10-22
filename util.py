@@ -1,4 +1,6 @@
 import numpy as np
+import os
+
 
 def sticks_with(u,v):
     """returns 1 if two strings stick. 0 otherwise."""
@@ -23,46 +25,68 @@ def sticks_with(u,v):
         return 1
 
 
-def get_correct_match(u):
+def sticky_type(input):
+    for k in range(len(input)/2):
+        if sticks_with(input[k],input[-k-1]) == 0:
+            return sticky_index(k)
 
-    """Returns match for the char"""
-    if u == 'A':
-        return 'C'
-    if u == 'B':
-        return 'D'
-    if u == 'C':
-        return 'A'
-    if u == 'D':
-        return 'B'
 
-def get_incorrect_match(u):
-    """Returns incorrect match for the char"""
-    random_num = np.random.randint(3)
-    if u == 'A':
-        if random_num == 0 :
-            return 'A'
-        if random_num == 1:
-            return 'B'
-        if random_num == 2:
-            return 'D'
-    if u == 'B':
-        if random_num == 0 :
-            return 'A'
-        if random_num == 1:
-            return 'B'
-        if random_num == 2:
-            return 'C'
-    if u == 'C':
-        if random_num == 0 :
-            return 'B'
-        if random_num == 1:
-            return 'C'
-        if random_num == 2:
-            return 'D'
-    if u == 'D':
-        if random_num == 0 :
-            return 'A'
-        if random_num == 1:
-            return 'C'
-        if random_num == 2:
-            return 'D'
+def sticky_index(k):
+    if k == 0 : return "Non-Stikcy"
+    if k in [1,2]: return "12-STICKY"
+    if k in [3,4]: return "34-STICKY"
+    if k in [5,6]: return "56-STICKY"
+    if k in [7,8]: return "78-STICKY"
+    else: return "STICK_PALINDROME"
+
+
+def mutation(letter):
+    """returns a mutation for a letter randomly among the other letters"""
+    letters = "ABCD"
+    random_index = np.random.randint(3)
+    return letters.replace(letter,"")[random_index]
+
+
+def write_weights_file(model_file, data):
+    f = open(model_file, 'w')
+    f.write(data)
+    f.close()
+    print 'Data written to file:', model_file
+
+
+def read_weights_from(model_file):
+    f = open(model_file, 'r')
+    weights = f.read()
+    return weights
+
+
+def check_line_length(text_file, n):
+    """Check length of individual line in file if a length is != n,
+        skip the file
+    """
+    with open(text_file) as f:
+        for line in f:
+            if len(line.strip()) != n:
+                return False
+        return True
+
+
+def read_data(data_folder):
+    files = os.listdir(data_folder)
+    something = []
+    for f in files:
+        if os.path.isfile(f) and check_line_length(f, 40):
+            # check the text and label it
+            with open(f) as text_file:
+                for line in text_file:
+                    t = sticky_type(line)
+                    # TODO:
+                    something.append([line, t])
+    return something
+
+
+
+
+
+
+
