@@ -83,3 +83,12 @@ def read_data(data_folder):
                     # TODO:
                     something.append([line, t])
     return something
+
+
+def string_to_ascii(text):
+    if text is None or len(text) == 0:
+        return None
+    features = []
+    for s in text:
+        features.append(ord(s))
+    return features
