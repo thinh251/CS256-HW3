@@ -72,13 +72,13 @@ class NeuronNetwork(object):
         output_layer = tf.matmul(hidden_layer_3, self.weights['w5']) + self.bias['b5']
         return output_layer
 
-    # def start(self, mode, model_file, data_folder):
+    # def start(self, mode, model_file.txt, data_folder):
     def start(self, mode, model_file, data_folder):
         # x, y = util.read_data(data_folder)
         if mode == 'train':
             self.train(self.features, self.output, model_file)
         # elif mode == '5fold':
-            # self.kfold(x, y, 5, model_file)
+            # self.kfold(x, y, 5, model_file.txt)
         elif mode == 'test.txt':
             test_x, test_y = util.load_test_data(data_folder)
             self.test(test_x, test_y, model_file)
@@ -154,7 +154,7 @@ class NeuronNetwork(object):
         session.close()
 
         # TODO: add detail to util.write_weights_file
-        # util.write_weights_file(model_file, W)
+        # util.write_weights_file(model_file.txt, W)
 
     def kfold(self, x, y, k, model_file):
         # TODO
@@ -170,48 +170,49 @@ class NeuronNetwork(object):
             test_y = yi[i]
 
     def test(self, x, y, model_file):
-        print 'Before assigning weight:', self.weights['w1']
-        # TODO
-        w = np.loadtxt(model_file)
+        # print 'Before assigning weight:', self.weights['w1']
+        full_path = os.path.join(os.path.curdir, model_file)
+        w = np.loadtxt(full_path)
         w = np.reshape(w, (5, self.max_node_of_layers, len(self.features[1])))
         # print 'Data load:', w
         w1 = np.transpose(w[0])
-        print 'Weight 1:', np.shape(w1)
-        tmp = np.ones((len(self.features[1]), self.hl1_node_num), dtype=float)
-        print 'Temp:', tmp
-        print 'Weight 2:', np.shape(w[1])
-        w2 = np.dot(w[1], tmp)
-        print 'W2:', w2.transpose()
+        w2 = np.transpose(w[1])
+        w2 = np.delete(w2, np.s_[self.il_node_num:], axis=0)
+        w2 = np.delete(w2, np.s_[self.hl1_node_num:], axis=1)
         w3 = np.transpose(w[2])
-        print 'Weight 3:', np.shape(w3)
+        w3 = np.delete(w3, np.s_[self.hl1_node_num:], axis=0)
+        w3 = np.delete(w3, np.s_[self.hl2_node_num:], axis=1)
         w4 = np.transpose(w[3])
-        print 'Weight 4:', np.shape(w4)
+        w4 = np.delete(w4, np.s_[self.hl2_node_num:], axis=0)
+        w4 = np.delete(w4, np.s_[self.hl3_node_num:], axis=1)
         w5 = np.transpose(w[4])
-        print 'Weight 5:', np.shape(w5)
-        # print 'W1 ', w1
-        # print 'W2 ', w2
-        # print 'W3 ', w3
-        # print 'W4 ', w4
-        # print 'W5 ', w5
-        # if w is not None:
-        #     self.weights['w1'].assign(w1)
-        #     # self.weights['w2'].assign(w2)
-        #     # self.weights['w3'].assign(w3)
-        #     # self.weights['w4'].assign(w4)
-        #     # self.weights['w5'].assign(w5)
-        #
-        #     init = tf.global_variables_initializer()
-        #
-        #     with tf.Session as session:
-        #         session.run(init)
-        #         predict_y = session.run(self.nn_output, feed_dict=x)
-        #         mse = tf.reduce_mean(tf.square(predict_y - y))
-        #         mse = session.run(mse)
-        #         print 'MSE: ', mse
-        #         print 'Accuracy:', session.run(self.nn_output, feed_dict={x: x, y: y})
-        #
-        # else:
-        #     raise IOError('Weight can not be loaded from model file')
+        w5 = np.delete(w5, np.s_[self.hl3_node_num:], axis=0)
+        w5 = np.delete(w5, np.s_[self.ol_node_num:], axis=1)
+        if w is not None:
+            self.weights['w1'].assign(w1)
+            self.weights['w2'].assign(w2)
+            self.weights['w3'].assign(w3)
+            self.weights['w4'].assign(w4)
+            self.weights['w5'].assign(w5)
+            start_time = datetime.now()
+            init = tf.global_variables_initializer()
+
+            correct_pred = tf.equal(tf.argmax(self.nn_output, 1), tf.argmax(self.y_known, 1))
+            accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+            session = tf.Session()
+            # with tf.Session as session:
+            session.run(init)
+            predict_y = session.run(self.nn_output, feed_dict={self.input: x, self.y_known: y})
+            mse = tf.reduce_mean(tf.square(predict_y - y))
+            mse = session.run(mse)
+            print 'Testing completed!'
+            print 'MSE: ', mse
+            print 'Accuracy:', session.run(accuracy, feed_dict={self.input: x, self.y_known: y})
+            session.close()
+            print 'Testing time: ', datetime.now() - start_time
+
+        else:
+            raise IOError('Weight can not be loaded from model file')
 
     @property
     def il_node_num(self):

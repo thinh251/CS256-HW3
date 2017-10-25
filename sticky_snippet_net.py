@@ -24,10 +24,10 @@ if __name__ == "__main__":
     # print (result)
     # args = sys.argv
     # mode = args[1]
-    # model_file = args[2]
+    # model_file.txt = args[2]
     # data_file = args[3]
     # if validate_arguments(args):
-    #     print 'Arguments are valid,', mode, model_file, data_file
+    #     print 'Arguments are valid,', mode, model_file.txt, data_file
     # inputs[0] : NON-STICK
     # inputs[1] : 12-STICK
     # inputs[2] : 34-STICK
@@ -47,5 +47,5 @@ if __name__ == "__main__":
 
     nn = NeuronNetwork(features, outputs, 0.01)
     nn.batch_size = 1
-    # nn.start('train', 'model_file', 'data_folder')
-    nn.start('test.txt', 'model_file', 'data_folder')
+    # nn.start('train', 'model_file.txt', 'data_folder')
+    nn.start('test.txt', 'model_file.txt', 'data_folder')
