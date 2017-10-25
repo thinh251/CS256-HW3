@@ -77,8 +77,8 @@ class NeuronNetwork(object):
         # x, y = util.read_data(data_folder)
         if mode == 'train':
             self.train(self.features, self.output, model_file)
-        # elif mode == '5fold':
-            # self.kfold(x, y, 5, model_file.txt)
+        elif mode == '5fold':
+            self.kfold(self.features, self.output, 5, model_file)
         elif mode == 'test.txt':
             test_x, test_y = util.load_test_data(data_folder)
             self.test(test_x, test_y, model_file)
@@ -161,13 +161,27 @@ class NeuronNetwork(object):
         """Split the features data into k parts and do cross-validation for these
         part
         """
-        # Can we use scipy library or we have to split data set manually?
-        xi = np.hsplit(x, k)
-        yi = np.hsplit(y, k)
+       # row = len(x[0])
+        x = np.arange(96).reshape(32, 3)
+        y = np.arange(96).reshape(32, 3)
+        # print 'X:', x
+        # print 'Y:', y
+        block = 32 / k
+        print 'Block:', block
+        for i in range(k):
+            sl_i = slice(i*block, (i + 1) * block)
+            text_x = x[sl_i]
+            #print 'Test X:', i, text_x
+            test_y = y[sl_i]
+            # test_y = np.split(y, [i*k, (i + 1) * k], axis=0)
+            #print 'Test Y:', i, test_y
+            train_x = np.delete(x, np.s_[i * block: (i + 1) * block], axis=0)
+            #print 'Train X:', i, train_x
+            train_y = np.delete(y, np.s_[i * block: (i + 1) * block], axis=0)
+            #print 'Train Y:', i, train_y
+            self.train(train_x, train_y, model_file)
+            self.test(text_x, test_y, model_file)
 
-        for i in range(len(xi)):
-            test_x = xi[i]
-            test_y = yi[i]
 
     def test(self, x, y, model_file):
         # print 'Before assigning weight:', self.weights['w1']
