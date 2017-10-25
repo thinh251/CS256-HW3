@@ -1,5 +1,7 @@
-import numpy as np
+import glob
 import os
+
+import numpy as np
 
 
 def sticks_with(u,v):
@@ -46,20 +48,6 @@ def mutation(letter):
     random_index = np.random.randint(3)
     return letters.replace(letter,"")[random_index]
 
-
-def write_weights_file(model_file, data):
-    f = open(model_file, 'w')
-    f.write(data)
-    f.close()
-    print 'Data written to file:', model_file
-
-
-def read_weights_from(model_file):
-    f = open(model_file, 'r')
-    weights = f.read()
-    return weights
-
-
 def check_line_length(text_file, n):
     """Check length of individual line in file if a length is != n,
         skip the file
@@ -72,16 +60,19 @@ def check_line_length(text_file, n):
 
 
 def read_data(data_folder):
-    files = os.listdir(data_folder)
+    files = glob.glob(data_folder)
     something = []
+    lines = []
     for f in files:
         if os.path.isfile(f) and check_line_length(f, 40):
             # check the text and label it
             with open(f) as text_file:
                 for line in text_file:
-                    t = sticky_type(line)
+                    lines.append(line)
+                    t = determine_sticky(line)
+                    lines.append(t)
                     # TODO:
-                    something.append([line, t])
+                    something.append(lines)
     return something
 
 
@@ -92,3 +83,58 @@ def string_to_ascii(text):
     for s in text:
         features.append(ord(s))
     return features
+
+
+def numberize_output_label(text):
+    if text == 'NONSTICK':
+        return [1, 0 ,0, 0, 0, 0]
+    elif text == "12-STICKY":
+        return [0, 1, 0, 0, 0, 0]
+    elif text == "34-STICKY":
+        return [0, 0, 1, 0, 0, 0]
+    elif text == "56-STICKY":
+        return [0, 0, 0, 1, 0, 0]
+    elif text == "78-STICKY":
+        return [0, 0, 0, 0, 1, 0]
+    elif text == "STICK_PALINDROME":
+        return [0, 0, 0, 0, 0, 1]
+
+
+def load_test_data(data_folder):
+    path = os.path.curdir + '/' + data_folder + '/*.txt'
+    test_data = read_data(path)
+    test_x = []
+    test_y = []
+    for t in test_data:
+        text = t[0]
+        label = t[1]
+        features = string_to_ascii(text)
+        test_x.append(features)
+        output = numberize_output_label(label)
+        test_y.append(output)
+    return test_x, test_y
+
+def determine_sticky(input_str):
+    """Determine the sticky label of a string"""
+    if input_str is None or len(input_str) == 0:
+        return
+
+    # v, w = input_str[:len(input_str)/2], input_str[len(input_str)/2:]
+    # w_reverse = w[::-1]  # reverse w
+    k = 1
+    is_stick = True
+    while is_stick and k <= len(input_str)/2:
+        u = input_str[:k]
+        v_len = len(input_str) - 2*k
+        w = input_str[v_len + k:]
+        w_reverse = w[::-1]
+        is_stick = sticks_with(u, w_reverse)
+        if is_stick:
+            k += 1
+
+    if k == 1:
+        return 'NONSTICK'
+    elif k < len(input_str)/2:
+        return str(k - 1) + str(k) + '-STICKY'
+    else:
+        return 'STICK_PALINDROME'

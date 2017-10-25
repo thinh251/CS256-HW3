@@ -1,6 +1,9 @@
 import numpy as np
 import tensorflow as tf
 import util
+from datetime import datetime
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class NeuronNetwork(object):
@@ -8,14 +11,14 @@ class NeuronNetwork(object):
     def __init__(self, x, y, epsilon):
         super(NeuronNetwork, self).__init__()
         # self.features = tf.placeholder(tf.float32, [None, len(x)])
-        self._il_node_num = 8
-        self._hl1_node_num = 6
-        self._hl2_node_num = 4
+        self._il_node_num = 5
+        self._hl1_node_num = 4
+        self._hl2_node_num = 3
         self._hl3_node_num = 2
         self._ol_node_num = 1
         self._batch_size = 1000
         # self._epoch = 1000
-        self.features = x # Concrete input
+        self.features = x  # Concrete input
         self.output = y   # Concrete output
         self.learning_rate = epsilon
 
@@ -32,60 +35,55 @@ class NeuronNetwork(object):
         """
         # Weights of the network is a matrix of 4 x max number of node in a layer
         self.weights = {
-            'features': tf.Variable(tf.truncated_normal(shape=(len(self.features[0]), self.il_node_num), mean=0.0, stddev=1)),
-            'hidden_1': tf.Variable(tf.truncated_normal(shape=(self.il_node_num, self.hl1_node_num), mean=0.0, stddev=1)),
-            'hidden_2': tf.Variable(tf.truncated_normal(shape=(self.hl1_node_num, self.hl2_node_num), mean=0.0, stddev=1)),
-            'hidden_3': tf.Variable(tf.truncated_normal(shape=(self.hl2_node_num, self.hl3_node_num), mean=0.0, stddev=1)),
+            'w1': tf.Variable(tf.random_uniform(shape=(len(self.features[1]), self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w2': tf.Variable(tf.random_uniform(shape=(self.il_node_num, self.hl1_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w3': tf.Variable(tf.random_uniform(shape=(self.hl1_node_num, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w4': tf.Variable(tf.random_uniform(shape=(self.hl2_node_num, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
             # because we have 6 sticky label
-            'out': tf.Variable(tf.truncated_normal(shape=(self.hl3_node_num, self.ol_node_num), mean=0.0, stddev=1))
+            'w5': tf.Variable(tf.truncated_normal(shape=(self.hl3_node_num, self.ol_node_num), mean=0.0, stddev=1))
         }
 
         self.bias = {
-            'features': tf.Variable(tf.truncated_normal(shape=(1, self.il_node_num), mean=0.0, stddev=1)),
-            'bias_1': tf.Variable(tf.truncated_normal(shape=(1, self.hl1_node_num), mean=0.0, stddev=1)),
-            'bias_2': tf.Variable(tf.truncated_normal(shape=(1, self.hl2_node_num), mean=0.0, stddev=1)),
-            'bias_3': tf.Variable(tf.truncated_normal(shape=(1, self.hl3_node_num), mean=0.0, stddev=1)),
+            'b1': tf.Variable(tf.random_uniform(shape=(1, self.il_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'b2': tf.Variable(tf.random_uniform(shape=(1, self.hl1_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'b3': tf.Variable(tf.random_uniform(shape=(1, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'b4': tf.Variable(tf.random_uniform(shape=(1, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
             # because we have 6 sticky label
-            'out': tf.Variable(tf.truncated_normal(shape=(1, self.label_count), mean=0.0, stddev=1))
+            'b5': tf.Variable(tf.truncated_normal(shape=(1, self.label_count), mean=0.0, stddev=1))
         }
 
     def __build_network(self):
         """ Define 5 layers for this homework.
             x is inputs, w: weight, b: bias
         """
-        self.input = tf.placeholder(tf.float32, [None, len(self.features[0])])
-        input_layer = tf.add(tf.matmul(self.input, self.weights['features']), self.bias['features'])
+        self.input = tf.placeholder(tf.float32, [None, len(self.features[1])])
+        input_layer = tf.add(tf.matmul(self.input, self.weights['w1']), self.bias['b1'])
         input_layer = tf.nn.relu(input_layer)
 
-        hidden_layer_1 = tf.add(tf.matmul(input_layer, self.weights['hidden_1']), self.bias['bias_1'])
+        hidden_layer_1 = tf.add(tf.matmul(input_layer, self.weights['w2']), self.bias['b2'])
         hidden_layer_1 = tf.nn.relu(hidden_layer_1)
 
-        hidden_layer_2 = tf.add(tf.matmul(hidden_layer_1, self.weights['hidden_2']), self.bias['bias_2'])
+        hidden_layer_2 = tf.add(tf.matmul(hidden_layer_1, self.weights['w3']), self.bias['b3'])
         hidden_layer_2 = tf.nn.relu(hidden_layer_2)
 
-        hidden_layer_3 = tf.add(tf.matmul(hidden_layer_2, self.weights['hidden_3']), self.bias['bias_3'])
+        hidden_layer_3 = tf.add(tf.matmul(hidden_layer_2, self.weights['w4']), self.bias['b4'])
         hidden_layer_3 = tf.nn.relu(hidden_layer_3)
 
-        output_layer = tf.matmul(hidden_layer_3, self.weights['out']) + self.bias['out']
+        output_layer = tf.matmul(hidden_layer_3, self.weights['w5']) + self.bias['b5']
         return output_layer
 
-    #def start(self, mode, model_file, data_folder):
-    def start(self, mode, model_file):
+    # def start(self, mode, model_file, data_folder):
+    def start(self, mode, model_file, data_folder):
         # x, y = util.read_data(data_folder)
         if mode == 'train':
-            # TODO:
-            # Assign random weight and bias for train only mode??
             self.train(self.features, self.output, model_file)
         # elif mode == '5fold':
             # self.kfold(x, y, 5, model_file)
-        # elif mode == 'test':
-            # self.test(x, y, model_file)
+        elif mode == 'test.txt':
+            test_x, test_y = util.load_test_data(data_folder)
+            self.test(test_x, test_y, model_file)
 
     def train(self, train_x, train_y, model_file):
-
-        # W = tf.Variable(tf.zeros([len(self.features)], self.label_count))
-        # b = tf.Variable(tf.zeros(self.label_count))
-
         # Evaluate model
         prediction = tf.nn.softmax(self.nn_output)
 
@@ -98,9 +96,12 @@ class NeuronNetwork(object):
 
         # mse, accuracy
         b = 0
+        # Open model file in overwrite mode
+        f = open(model_file, 'w')
         # with tf.Session as session:
         session = tf.Session()
         session.run(init)
+        start_time = datetime.now()
         # batch_x, batch_y = tf.train.batch(train_x, train_y, self.batch_size)
         session.run(optimizer, feed_dict={self.input: train_x, self.y_known: train_y})
         session.run(cost, feed_dict={self.input: train_x, self.y_known: train_y})
@@ -108,8 +109,48 @@ class NeuronNetwork(object):
                                 tf.argmax(self.y_known, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
         accuracy = session.run(accuracy, feed_dict={self.input: train_x, self.y_known: train_y})
-        print b + len(train_x), ' items trained, - Accuracy: ', accuracy
+        print 'Processing completed:', b + len(train_x), 'items trained, - Accuracy: ', accuracy
+        print 'Training time: ', datetime.now() - start_time
+        np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
+        # 5 layers
+        print("Current W: ")
+        # for w in self.weights:
+        #     o_w = np.array(self.weights[w].eval(session=session))
+        #     print w, '\n', o_w
+        w_matrix = np.zeros((5, self.max_node_of_layers, len(self.features[1])), dtype=float)
+        # print "Initiated w_matrix:", w_matrix
+        key_list = self.weights.keys()
+        key_list.sort()
+        i = 0
+        for w in key_list:  # 5 layers
+            layer_w = np.array(self.weights[w].eval(session=session))
+            layer_w_t = layer_w.T
+            print 'Layer: ', w, 'Shape: ', np.shape(layer_w_t)
+            d = len(self.features[1])
+            if w == 'w2':
+                d = self.il_node_num
+            elif w == 'w3':
+                d = self.hl1_node_num
+            elif w == 'w4':
+                d = self.hl2_node_num
+            elif w == 'w5':
+                d = self.hl3_node_num
+            it = np.nditer(layer_w_t, flags=['f_index'])
+            while not it.finished:
+                r = it.index / d
+                c = it.index % d
+                w_matrix[i][r][c] = it[0]
+                it.iternext()
+            i += 1
 
+        print w_matrix
+
+        with open(model_file, 'w') as f:
+            s = 1
+            for data_slice in w_matrix:
+                f.write('#w' + str(s) + '\n')
+                np.savetxt(f, data_slice, fmt='%2.3f')
+                s += 1
         session.close()
 
         # TODO: add detail to util.write_weights_file
@@ -129,26 +170,48 @@ class NeuronNetwork(object):
             test_y = yi[i]
 
     def test(self, x, y, model_file):
-        #TODO
-        w = util.read_weights_from(model_file)
-        if w is not None:
-            self.weights['hidden_1'].assign(w[0])
-            self.weights['hidden_2'].assign(w[1])
-            self.weights['hidden_3'].assign(w[2])
-            self.weights['hidden_4'].assign(w[3])
-            self.weights['hidden_5'].assign(w[4])
-
-            predict = tf.argmax(self.nn_output, axis=1)
-            correct_pred = tf.equal(tf.argmax(predict, 1), tf.argmax(y, 1))
-            accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-
-            init = tf.global_variables_initializer()
-            with tf.Session as session:
-                session.run(init)
-                session.run(accuracy, feed_dict={x: x, y: y})
-
-        else:
-            raise IOError('Weight can not be loaded from model file')
+        print 'Before assigning weight:', self.weights['w1']
+        # TODO
+        w = np.loadtxt(model_file)
+        w = np.reshape(w, (5, self.max_node_of_layers, len(self.features[1])))
+        # print 'Data load:', w
+        w1 = np.transpose(w[0])
+        print 'Weight 1:', np.shape(w1)
+        tmp = np.ones((len(self.features[1]), self.hl1_node_num), dtype=float)
+        print 'Temp:', tmp
+        print 'Weight 2:', np.shape(w[1])
+        w2 = np.dot(w[1], tmp)
+        print 'W2:', w2.transpose()
+        w3 = np.transpose(w[2])
+        print 'Weight 3:', np.shape(w3)
+        w4 = np.transpose(w[3])
+        print 'Weight 4:', np.shape(w4)
+        w5 = np.transpose(w[4])
+        print 'Weight 5:', np.shape(w5)
+        # print 'W1 ', w1
+        # print 'W2 ', w2
+        # print 'W3 ', w3
+        # print 'W4 ', w4
+        # print 'W5 ', w5
+        # if w is not None:
+        #     self.weights['w1'].assign(w1)
+        #     # self.weights['w2'].assign(w2)
+        #     # self.weights['w3'].assign(w3)
+        #     # self.weights['w4'].assign(w4)
+        #     # self.weights['w5'].assign(w5)
+        #
+        #     init = tf.global_variables_initializer()
+        #
+        #     with tf.Session as session:
+        #         session.run(init)
+        #         predict_y = session.run(self.nn_output, feed_dict=x)
+        #         mse = tf.reduce_mean(tf.square(predict_y - y))
+        #         mse = session.run(mse)
+        #         print 'MSE: ', mse
+        #         print 'Accuracy:', session.run(self.nn_output, feed_dict={x: x, y: y})
+        #
+        # else:
+        #     raise IOError('Weight can not be loaded from model file')
 
     @property
     def il_node_num(self):
@@ -217,15 +280,18 @@ class NeuronNetwork(object):
             self._batch_size = value
 
     @property
-    def epoch(self):
-        return self._epoch
-
-    @epoch.setter
-    def epoch(self, value):
-        if value <= 0:
-            raise ValueError('Epoch must greater than 0')
-        else:
-            self._epoch = value
+    def max_node_of_layers(self):
+        return max(self.il_node_num, self.hl1_node_num, self.hl2_node_num, self.hl3_node_num, self.ol_node_num)
+    # @property
+    # def epoch(self):
+    #     return self._epoch
+    #
+    # @epoch.setter
+    # def epoch(self, value):
+    #     if value <= 0:
+    #         raise ValueError('Epoch must greater than 0')
+    #     else:
+    #         self._epoch = value
 
     @property
     def label_count(self):
