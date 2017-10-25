@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import util
 from datetime import datetime
+from datetime import timedelta
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -10,7 +11,7 @@ class NeuronNetwork(object):
 
     def __init__(self, x, y, epsilon):
         super(NeuronNetwork, self).__init__()
-        # self.features = tf.placeholder(tf.float32, [None, len(x)])
+        # self.input_texts = tf.placeholder(tf.float32, [None, len(x)])
         self._il_node_num = 5
         self._hl1_node_num = 4
         self._hl2_node_num = 3
@@ -18,15 +19,22 @@ class NeuronNetwork(object):
         self._ol_node_num = 1
         self._batch_size = 1000
         # self._epoch = 1000
-        self.features = x  # Concrete input
-        self.output = y   # Concrete output
+        self.input_data = x  # Concrete input_holder data
+        self.output_data = y   # Concrete output data
+        self.__number_of_features = len(self.input_data[0])
+        # print 'Number of input_data: ', self.number_of_features
         self.learning_rate = epsilon
-
-        # The real output from model data
-        self.y_known = tf.placeholder(tf.float32, [None, self.label_count])
+        # Hold the input_data for training and testing
+        self.input_holder = tf.placeholder(tf.float32, [None, self.number_of_features])
+        # Hold the output_data for training and testing
+        self.y_holder = tf.placeholder(tf.float32, [None, self.label_count])
         self.__define_weight_bias()
-        # Neuron network output
+        # Neuron network output_data
         self.nn_output = self.__build_network()
+        self.test_accuracy_history = []
+        self.train_accuracy_history = []
+        self.items_trained = 0
+        self.items_test = 0
 
     def __define_weight_bias(self):
         """Define the weights and bias of layers
@@ -35,7 +43,7 @@ class NeuronNetwork(object):
         """
         # Weights of the network is a matrix of 4 x max number of node in a layer
         self.weights = {
-            'w1': tf.Variable(tf.random_uniform(shape=(len(self.features[1]), self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w1': tf.Variable(tf.random_uniform(shape=(self.number_of_features, self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
             'w2': tf.Variable(tf.random_uniform(shape=(self.il_node_num, self.hl1_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32)),
             'w3': tf.Variable(tf.random_uniform(shape=(self.hl1_node_num, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
             'w4': tf.Variable(tf.random_uniform(shape=(self.hl2_node_num, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
@@ -54,10 +62,9 @@ class NeuronNetwork(object):
 
     def __build_network(self):
         """ Define 5 layers for this homework.
-            x is inputs, w: weight, b: bias
+            x is input_texts, w: weight, b: bias
         """
-        self.input = tf.placeholder(tf.float32, [None, len(self.features[1])])
-        input_layer = tf.add(tf.matmul(self.input, self.weights['w1']), self.bias['b1'])
+        input_layer = tf.add(tf.matmul(self.input_holder, self.weights['w1']), self.bias['b1'])
         input_layer = tf.nn.relu(input_layer)
 
         hidden_layer_1 = tf.add(tf.matmul(input_layer, self.weights['w2']), self.bias['b2'])
@@ -76,48 +83,63 @@ class NeuronNetwork(object):
     def start(self, mode, model_file, data_folder):
         # x, y = util.read_data(data_folder)
         if mode == 'train':
-            self.train(self.features, self.output, model_file)
+            start_time = datetime.now()
+            self.train(self.input_data, self.output_data, model_file)
+            print 'Processing completed:\n',
+            print self.items_trained, 'item(s) trained,'
+            print self.items_test, 'item(s) tested'
+            print 'Accuracy: ', np.mean(self.train_accuracy_history)
+            print 'Training time: ', datetime.now() - start_time
         elif mode == '5fold':
-            self.kfold(self.features, self.output, 5, model_file)
-        elif mode == 'test.txt':
+            training_time, testing_time = self.kfold(self.input_data, self.output_data, self.KFOLD, model_file)
+            print '5fold completed!!!'
+            print len(self.input_data), 'item(s) trained,'
+            print self.items_test, 'item(s) tested'
+            print 'Training accuracy: ', np.mean(self.train_accuracy_history)
+            print 'Testing accuracy: ', np.mean(self.test_accuracy_history)
+            print 'Training time: ', training_time
+            print 'Testing time: ', training_time
+        elif mode == 'test':
             test_x, test_y = util.load_test_data(data_folder)
+            start_time = datetime.now()
             self.test(test_x, test_y, model_file)
+            print 'Testing completed!'
+            print 'Accuracy:', np.mean(self.test_accuracy_history)
+            print 'Testing time: ', datetime.now() - start_time
 
     def train(self, train_x, train_y, model_file):
+
         # Evaluate model
         prediction = tf.nn.softmax(self.nn_output)
 
         # Backward propagation: update weights to minimize the cost
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-            logits=self.nn_output, labels=self.y_known))
+            logits=self.nn_output, labels=self.y_holder))
         optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(cost)
 
         init = tf.global_variables_initializer()
 
         # mse, accuracy
         b = 0
-        # Open model file in overwrite mode
-        f = open(model_file, 'w')
+
         # with tf.Session as session:
         session = tf.Session()
         session.run(init)
-        start_time = datetime.now()
+
         # batch_x, batch_y = tf.train.batch(train_x, train_y, self.batch_size)
-        session.run(optimizer, feed_dict={self.input: train_x, self.y_known: train_y})
-        session.run(cost, feed_dict={self.input: train_x, self.y_known: train_y})
+        session.run(optimizer, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
+        session.run(cost, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
         correct_pred = tf.equal(tf.argmax(prediction, 1),
-                                tf.argmax(self.y_known, 1))
+                                tf.argmax(self.y_holder, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-        accuracy = session.run(accuracy, feed_dict={self.input: train_x, self.y_known: train_y})
-        print 'Processing completed:', b + len(train_x), 'items trained, - Accuracy: ', accuracy
-        print 'Training time: ', datetime.now() - start_time
+        accuracy = session.run(accuracy, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
+        self.items_trained += len(train_x)
+        self.train_accuracy_history.append(accuracy)
+
         np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
         # 5 layers
-        print("Current W: ")
-        # for w in self.weights:
-        #     o_w = np.array(self.weights[w].eval(session=session))
-        #     print w, '\n', o_w
-        w_matrix = np.zeros((5, self.max_node_of_layers, len(self.features[1])), dtype=float)
+        # print("Current W: ")
+        w_matrix = np.zeros((5, self.max_node_of_layers, self.number_of_features), dtype=float)
         # print "Initiated w_matrix:", w_matrix
         key_list = self.weights.keys()
         key_list.sort()
@@ -125,8 +147,8 @@ class NeuronNetwork(object):
         for w in key_list:  # 5 layers
             layer_w = np.array(self.weights[w].eval(session=session))
             layer_w_t = layer_w.T
-            print 'Layer: ', w, 'Shape: ', np.shape(layer_w_t)
-            d = len(self.features[1])
+            # print 'Layer: ', w, 'Shape: ', np.shape(layer_w_t)
+            d = self.number_of_features
             if w == 'w2':
                 d = self.il_node_num
             elif w == 'w3':
@@ -143,8 +165,9 @@ class NeuronNetwork(object):
                 it.iternext()
             i += 1
 
-        print w_matrix
+        # print w_matrix
 
+        # Open model file in overwrite mode
         with open(model_file, 'w') as f:
             s = 1
             for data_slice in w_matrix:
@@ -153,41 +176,52 @@ class NeuronNetwork(object):
                 s += 1
         session.close()
 
-        # TODO: add detail to util.write_weights_file
-        # util.write_weights_file(model_file.txt, W)
-
     def kfold(self, x, y, k, model_file):
-        # TODO
-        """Split the features data into k parts and do cross-validation for these
-        part
+        """Split the input_texts data into k parts and do cross-validation
+            - Pick 1 part as  test data
+            - (k - 1) parts as training data
         """
-       # row = len(x[0])
-        x = np.arange(96).reshape(32, 3)
-        y = np.arange(96).reshape(32, 3)
+        # Clear the history
+        self.test_accuracy_history = []
+        self.train_accuracy_history = []
+        self.items_test = 0
+        self.items_trained = 0
+        row = len(x)
+        #  x = np.arange(96).reshape(32, 3)
+        #  y = np.arange(96).reshape(32, 3)
         # print 'X:', x
         # print 'Y:', y
-        block = 32 / k
-        print 'Block:', block
+        block = row / k
+        # print 'Block:', block
+        training_time = timedelta(0, 0, 0)
+        testing_time = timedelta(0, 0, 0)
         for i in range(k):
             sl_i = slice(i*block, (i + 1) * block)
             text_x = x[sl_i]
-            #print 'Test X:', i, text_x
+            # print 'Test X:', i, text_x
             test_y = y[sl_i]
             # test_y = np.split(y, [i*k, (i + 1) * k], axis=0)
-            #print 'Test Y:', i, test_y
+            # print 'Test Y:', i, test_y
             train_x = np.delete(x, np.s_[i * block: (i + 1) * block], axis=0)
-            #print 'Train X:', i, train_x
+            # print 'Train X:', i, train_x
             train_y = np.delete(y, np.s_[i * block: (i + 1) * block], axis=0)
-            #print 'Train Y:', i, train_y
-            self.train(train_x, train_y, model_file)
-            self.test(text_x, test_y, model_file)
+            # print 'Train Y:', i, train_y
+            start_time = datetime.now()
 
+            self.train(train_x, train_y, model_file)
+            duration = datetime.now() - start_time
+            training_time += duration
+            start_time = datetime.now()
+            self.test(text_x, test_y, model_file)
+            duration = datetime.now() - start_time
+            testing_time += duration
+        return training_time, testing_time
 
     def test(self, x, y, model_file):
         # print 'Before assigning weight:', self.weights['w1']
         full_path = os.path.join(os.path.curdir, model_file)
         w = np.loadtxt(full_path)
-        w = np.reshape(w, (5, self.max_node_of_layers, len(self.features[1])))
+        w = np.reshape(w, (5, self.max_node_of_layers, self.number_of_features))
         # print 'Data load:', w
         w1 = np.transpose(w[0])
         w2 = np.transpose(w[1])
@@ -208,23 +242,21 @@ class NeuronNetwork(object):
             self.weights['w3'].assign(w3)
             self.weights['w4'].assign(w4)
             self.weights['w5'].assign(w5)
-            start_time = datetime.now()
             init = tf.global_variables_initializer()
 
-            correct_pred = tf.equal(tf.argmax(self.nn_output, 1), tf.argmax(self.y_known, 1))
+            correct_pred = tf.equal(tf.argmax(self.nn_output, 1), tf.argmax(self.y_holder, 1))
             accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
             session = tf.Session()
             # with tf.Session as session:
             session.run(init)
-            predict_y = session.run(self.nn_output, feed_dict={self.input: x, self.y_known: y})
+            predict_y = session.run(self.nn_output, feed_dict={self.input_holder: x, self.y_holder: y})
             mse = tf.reduce_mean(tf.square(predict_y - y))
             mse = session.run(mse)
-            print 'Testing completed!'
-            print 'MSE: ', mse
-            print 'Accuracy:', session.run(accuracy, feed_dict={self.input: x, self.y_known: y})
-            session.close()
-            print 'Testing time: ', datetime.now() - start_time
 
+            accuracy = session.run(accuracy, feed_dict={self.input_holder: x, self.y_holder: y})
+            self.items_test += len(x)
+            self.test_accuracy_history.append(accuracy)
+            session.close()
         else:
             raise IOError('Weight can not be loaded from model file')
 
@@ -311,3 +343,11 @@ class NeuronNetwork(object):
     @property
     def label_count(self):
         return 6
+
+    @property
+    def number_of_features(self):
+        return self.__number_of_features
+
+    @property
+    def KFOLD(self):
+        return 3

@@ -28,25 +28,25 @@ if __name__ == "__main__":
     # data_file = args[3]
     # if validate_arguments(args):
     #     print 'Arguments are valid,', mode, model_file.txt, data_file
-    # inputs[0] : NON-STICK
-    # inputs[1] : 12-STICK
-    # inputs[2] : 34-STICK
-    # inputs[3] : 56-STICK
-    # inputs[4] : 78-STICK
-    # inputs[5] : PALINDROME - STICK
+    # input_texts[0] : NON-STICK
+    # input_texts[1] : 12-STICK
+    # input_texts[2] : 34-STICK
+    # input_texts[3] : 56-STICK
+    # input_texts[4] : 78-STICK
+    # input_texts[5] : PALINDROME - STICK
 
-    inputs = ['BACBDCBDBBACBACDADDCABBCBACDACDDBDABDACD',
+    input_texts = ['BACBDCBDBBACBACDADDCABBCBACDACDDBDABDACD',
               'BACBDCBDBBACBACDADDCABBCBACDACDDBDABDAAD',
               'BACDDCBDBBACBACDADDCABBCBACDACDDBDABDACD']
-    features = []
+    inputs = []
 
-    for i in inputs:
+    for i in input_texts:
         e = util.string_to_ascii(i)
-        features.append(e)
-    outputs = [[0, 0, 0, 0, 0, 1], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]]
+        inputs.append(e)
+    outputs = [[0.0, 0.0, 0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]]
 
-    nn = NeuronNetwork(features, outputs, 0.01)
+    nn = NeuronNetwork(inputs, outputs, 0.01)
     nn.batch_size = 1
     # nn.start('train', 'model_file.txt', 'data_folder')
-    # nn.start('test.txt', 'model_file.txt', 'data_folder')
+    # nn.start('test', 'model_file.txt', 'data_folder')
     nn.start('5fold', 'model_file', 'data_folder')
