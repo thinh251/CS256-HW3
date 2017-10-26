@@ -1,151 +1,353 @@
 import numpy as np
 import tensorflow as tf
 import util
+from datetime import datetime
+from datetime import timedelta
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class NeuronNetwork(object):
 
-    def __init__(self, x, bias, epsilon):
+    def __init__(self, x, y, epsilon):
         super(NeuronNetwork, self).__init__()
-        # self.input = tf.placeholder(tf.float32, [None, len(x)])
-        self.input = x
+        # self.input_texts = tf.placeholder(tf.float32, [None, len(x)])
+        self._il_node_num = 5
+        self._hl1_node_num = 4
+        self._hl2_node_num = 3
+        self._hl3_node_num = 2
+        self._ol_node_num = 1
+        self._batch_size = 1000
+        # self._epoch = 1000
+        self.input_data = x  # Concrete input_holder data
+        self.output_data = y   # Concrete output data
+        self.__number_of_features = len(self.input_data[0])
+        # print 'Number of input_data: ', self.number_of_features
         self.learning_rate = epsilon
-        self.weights = tf.random_normal(np.shape(x[1]), stddev=0.1)
-        # How to calculate bias will be discussed in class on Monday
-        self.biases
-        self.num_labels = 6
-        # The real output from model data
-        self.y_known = tf.placeholder(tf.float32, [None, self.num_labels])
-        # TODO:
-        # weight generate random? , how to pick b will be discussed in
-        # class on Monday
-        self.__define_weight_bias([5, 4, 3, 2, 1])
-        # Neuron network output
-        self.nn_output = self.__build_network(self.input, self.weights,
-                                              self.bias)
+        # Hold the input_data for training and testing
+        self.input_holder = tf.placeholder(tf.float32, [None, self.number_of_features])
+        # Hold the output_data for training and testing
+        self.y_holder = tf.placeholder(tf.float32, [None, self.label_count])
+        self.__define_weight_bias()
+        # Neuron network output_data
+        self.nn_output = self.__build_network()
+        self.test_accuracy_history = []
+        self.train_accuracy_history = []
+        self.items_trained = 0
+        self.items_test = 0
 
-
-    def __define_weight_bias(self, hidden_dimensions):
-        """Define the weights and bias of hidden layers
-            hidden_dimenssions: is an array whose elements is the number
-            of weight element of a particular layer
-            For example: [3, 2, 1] means
-            - Hidden layer 1: has 3 weight
-            - Hidden layer 2: has 2 weight
-            - Hidden layer 1: has 1 weight
+    def __define_weight_bias(self):
+        """Define the weights and bias of layers
+            weights are matrix hold random number between -b and b
+            For now, b belongs to a set [-1, 1]
         """
+        # Weights of the network is a matrix of 4 x max number of node in a layer
         self.weights = {
-            'hidden_1': tf.Variable(tf.truncated_normal([len(self.input), hidden_dimensions[0]])),
-            'hidden_2': tf.Variable(tf.truncated_normal([hidden_dimensions[0], hidden_dimensions[1]])),
-            'hidden_3': tf.Variable(tf.truncated_normal([hidden_dimensions[1], hidden_dimensions[2]])),
-            'hidden_4': tf.Variable(tf.truncated_normal([hidden_dimensions[2], hidden_dimensions[3]])),
-            'hidden_5': tf.Variable(tf.truncated_normal([hidden_dimensions[3], hidden_dimensions[4]])),
+            'w1': tf.Variable(tf.random_uniform(shape=(self.number_of_features, self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w2': tf.Variable(tf.random_uniform(shape=(self.il_node_num, self.hl1_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w3': tf.Variable(tf.random_uniform(shape=(self.hl1_node_num, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w4': tf.Variable(tf.random_uniform(shape=(self.hl2_node_num, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
             # because we have 6 sticky label
-            'out': tf.Variable(tf.truncated_normal([hidden_dimensions[4], self.num_labels]))
+            'w5': tf.Variable(tf.truncated_normal(shape=(self.hl3_node_num, self.ol_node_num), mean=0.0, stddev=1))
         }
 
         self.bias = {
-            'bias_1': tf.Variable(tf.truncated_normal(hidden_dimensions[0])),
-            'bias_2': tf.Variable(tf.truncated_normal(hidden_dimensions[1])),
-            'bias_3': tf.Variable(tf.truncated_normal(hidden_dimensions[2])),
-            'bias_4': tf.Variable(tf.truncated_normal(hidden_dimensions[3])),
-            'bias_5': tf.Variable(tf.truncated_normal(hidden_dimensions[4])),
+            'b1': tf.Variable(tf.random_uniform(shape=(1, self.il_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'b2': tf.Variable(tf.random_uniform(shape=(1, self.hl1_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'b3': tf.Variable(tf.random_uniform(shape=(1, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'b4': tf.Variable(tf.random_uniform(shape=(1, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
             # because we have 6 sticky label
-            'out': tf.Variable(tf.truncated_normal(self.num_labels))
+            'b5': tf.Variable(tf.truncated_normal(shape=(1, self.label_count), mean=0.0, stddev=1))
         }
 
-
-    def __build_network(self, x, w, b):
+    def __build_network(self):
         """ Define 5 layers for this homework.
-            x is inputs, w: weight, b: bias
+            x is input_texts, w: weight, b: bias
         """
-        layer_1 = tf.add(tf.matmul(x, w['hidden_1'], b['bias_1']))
-        layer_1 = tf.nn.relu(layer_1)
+        input_layer = tf.add(tf.matmul(self.input_holder, self.weights['w1']), self.bias['b1'])
+        input_layer = tf.nn.relu(input_layer)
 
-        layer_2 = tf.add(tf.matmul(layer_1, w['hidden_2'], b['bias_2']))
-        layer_2 = tf.nn.relu(layer_2)
+        hidden_layer_1 = tf.add(tf.matmul(input_layer, self.weights['w2']), self.bias['b2'])
+        hidden_layer_1 = tf.nn.relu(hidden_layer_1)
 
-        layer_3 = tf.add(tf.matmul(layer_2, w['hidden_3'], b['bias_3']))
-        layer_3 = tf.nn.relu(layer_3)
+        hidden_layer_2 = tf.add(tf.matmul(hidden_layer_1, self.weights['w3']), self.bias['b3'])
+        hidden_layer_2 = tf.nn.relu(hidden_layer_2)
 
-        layer_4 = tf.add(tf.matmul(layer_3, w['hidden_4'], b['bias_4']))
-        layer_4 = tf.nn.relu(layer_4)
+        hidden_layer_3 = tf.add(tf.matmul(hidden_layer_2, self.weights['w4']), self.bias['b4'])
+        hidden_layer_3 = tf.nn.relu(hidden_layer_3)
 
-        layer_5 = tf.add(tf.matmul(layer_4, w['hidden_5'], b['bias_5']))
-        layer_5 = tf.nn.softmax(layer_5)
-
-        output_layer = tf.matmul(layer_5, w['out'], b['out'])
+        output_layer = tf.matmul(hidden_layer_3, self.weights['w5']) + self.bias['b5']
         return output_layer
 
-
+    # def start(self, mode, model_file.txt, data_folder):
     def start(self, mode, model_file, data_folder):
-        x, y = util.read_data(data_folder)
+        # x, y = util.read_data(data_folder)
         if mode == 'train':
-            # TODO:
-            # Assign random weight and bias for train only mode??
-            self.train(x, y, model_file)
+            start_time = datetime.now()
+            self.train(self.input_data, self.output_data, model_file)
+            print 'Processing completed:\n',
+            print self.items_trained, 'item(s) trained,'
+            print self.items_test, 'item(s) tested'
+            print 'Accuracy: ', np.mean(self.train_accuracy_history)
+            print 'Training time: ', datetime.now() - start_time
         elif mode == '5fold':
-            self.kfold(x, y, 5, model_file)
+            training_time, testing_time = self.kfold(self.input_data, self.output_data, self.KFOLD, model_file)
+            print '5fold completed!!!'
+            print len(self.input_data), 'item(s) trained,'
+            print self.items_test, 'item(s) tested'
+            print 'Training accuracy: ', np.mean(self.train_accuracy_history)
+            print 'Testing accuracy: ', np.mean(self.test_accuracy_history)
+            print 'Training time: ', training_time
+            print 'Testing time: ', training_time
         elif mode == 'test':
-            self.test(x, y, model_file)
-
+            test_x, test_y = util.load_test_data(data_folder)
+            start_time = datetime.now()
+            self.test(test_x, test_y, model_file)
+            print 'Testing completed!'
+            print 'Accuracy:', np.mean(self.test_accuracy_history)
+            print 'Testing time: ', datetime.now() - start_time
 
     def train(self, train_x, train_y, model_file):
-        x = tf.placeholder(tf.float32, [None, len(self.input)])
-        W = tf.Variable(tf.zeros([len(self.input)], self.num_labels))
-        b = tf.Variable(tf.zeros(self.num_labels))
-        # y_predict = tf.placeholder(tf.float32, [None, self.num_labels])
 
-        # Forward propagation
-        # nn_output = self.define_layers(self.input, self.weights, self.biases)
-        # nn_output is define in __init__ method
-        predict = tf.argmax(self.nn_output, axis=1)
+        # Evaluate model
+        prediction = tf.nn.softmax(self.nn_output)
 
         # Backward propagation: update weights to minimize the cost
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-            logits=self.nn_output, labels=self.y_known))
+            logits=self.nn_output, labels=self.y_holder))
         optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(cost)
 
         init = tf.global_variables_initializer()
-        # mse, accuracy
-        with tf.Session as session:
-            session.run(init)
-            for epoch in range(len(train_x)):
 
-                session.run(optimizer, feed_dict={x: train_x, self.y_known: train_y})
-                cost = session.run(cost, feed_dict={x: train_x, self.y_known: train_y})
-                # y_predict = session.run(self.nn_output, feed_dict=)
-        # TODO: add detail to util.write_weights_file
-        util.write_weights_file(model_file, W)
+        # mse, accuracy
+        b = 0
+
+        # with tf.Session as session:
+        session = tf.Session()
+        session.run(init)
+
+        # batch_x, batch_y = tf.train.batch(train_x, train_y, self.batch_size)
+        session.run(optimizer, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
+        session.run(cost, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
+        correct_pred = tf.equal(tf.argmax(prediction, 1),
+                                tf.argmax(self.y_holder, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+        accuracy = session.run(accuracy, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
+        self.items_trained += len(train_x)
+        self.train_accuracy_history.append(accuracy)
+
+        np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
+        # 5 layers
+        # print("Current W: ")
+        w_matrix = np.zeros((5, self.max_node_of_layers, self.number_of_features), dtype=float)
+        # print "Initiated w_matrix:", w_matrix
+        key_list = self.weights.keys()
+        key_list.sort()
+        i = 0
+        for w in key_list:  # 5 layers
+            layer_w = np.array(self.weights[w].eval(session=session))
+            layer_w_t = layer_w.T
+            # print 'Layer: ', w, 'Shape: ', np.shape(layer_w_t)
+            d = self.number_of_features
+            if w == 'w2':
+                d = self.il_node_num
+            elif w == 'w3':
+                d = self.hl1_node_num
+            elif w == 'w4':
+                d = self.hl2_node_num
+            elif w == 'w5':
+                d = self.hl3_node_num
+            it = np.nditer(layer_w_t, flags=['f_index'])
+            while not it.finished:
+                r = it.index / d
+                c = it.index % d
+                w_matrix[i][r][c] = it[0]
+                it.iternext()
+            i += 1
+
+        # print w_matrix
+
+        # Open model file in overwrite mode
+        with open(model_file, 'w') as f:
+            s = 1
+            for data_slice in w_matrix:
+                f.write('#w' + str(s) + '\n')
+                np.savetxt(f, data_slice, fmt='%2.3f')
+                s += 1
+        session.close()
 
     def kfold(self, x, y, k, model_file):
-        # TODO
-        """Split the input data into k parts and do cross-validation for these
-        part
+        """Split the input_texts data into k parts and do cross-validation
+            - Pick 1 part as  test data
+            - (k - 1) parts as training data
         """
-        # Can we use scipy library or we have to split data set manually?
-        xi = np.hsplit(x, k)
-        yi = np.hsplit(y, k)
+        # Clear the history
+        self.test_accuracy_history = []
+        self.train_accuracy_history = []
+        self.items_test = 0
+        self.items_trained = 0
+        row = len(x)
+        #  x = np.arange(96).reshape(32, 3)
+        #  y = np.arange(96).reshape(32, 3)
+        # print 'X:', x
+        # print 'Y:', y
+        block = row / k
+        # print 'Block:', block
+        training_time = timedelta(0, 0, 0)
+        testing_time = timedelta(0, 0, 0)
+        for i in range(k):
+            sl_i = slice(i*block, (i + 1) * block)
+            text_x = x[sl_i]
+            # print 'Test X:', i, text_x
+            test_y = y[sl_i]
+            # test_y = np.split(y, [i*k, (i + 1) * k], axis=0)
+            # print 'Test Y:', i, test_y
+            train_x = np.delete(x, np.s_[i * block: (i + 1) * block], axis=0)
+            # print 'Train X:', i, train_x
+            train_y = np.delete(y, np.s_[i * block: (i + 1) * block], axis=0)
+            # print 'Train Y:', i, train_y
+            start_time = datetime.now()
 
-        for i in range(len(xi)):
-            test_x = xi[i]
-            test_y = yi[i]
+            self.train(train_x, train_y, model_file)
+            duration = datetime.now() - start_time
+            training_time += duration
+            start_time = datetime.now()
+            self.test(text_x, test_y, model_file)
+            duration = datetime.now() - start_time
+            testing_time += duration
+        return training_time, testing_time
 
     def test(self, x, y, model_file):
-        #TODO
-        w = util.read_weights_from(model_file)
-        if None != w:
-            self.weights['hidden_1'].assign(w[0])
-            self.weights['hidden_2'].assign(w[1])
-            self.weights['hidden_3'].assign(w[2])
-            self.weights['hidden_4'].assign(w[3])
-            self.weights['hidden_5'].assign(w[4])
-            self.test(x, y)
+        # print 'Before assigning weight:', self.weights['w1']
+        full_path = os.path.join(os.path.curdir, model_file)
+        w = np.loadtxt(full_path)
+        w = np.reshape(w, (5, self.max_node_of_layers, self.number_of_features))
+        # print 'Data load:', w
+        w1 = np.transpose(w[0])
+        w2 = np.transpose(w[1])
+        w2 = np.delete(w2, np.s_[self.il_node_num:], axis=0)
+        w2 = np.delete(w2, np.s_[self.hl1_node_num:], axis=1)
+        w3 = np.transpose(w[2])
+        w3 = np.delete(w3, np.s_[self.hl1_node_num:], axis=0)
+        w3 = np.delete(w3, np.s_[self.hl2_node_num:], axis=1)
+        w4 = np.transpose(w[3])
+        w4 = np.delete(w4, np.s_[self.hl2_node_num:], axis=0)
+        w4 = np.delete(w4, np.s_[self.hl3_node_num:], axis=1)
+        w5 = np.transpose(w[4])
+        w5 = np.delete(w5, np.s_[self.hl3_node_num:], axis=0)
+        w5 = np.delete(w5, np.s_[self.ol_node_num:], axis=1)
+        if w is not None:
+            self.weights['w1'].assign(w1)
+            self.weights['w2'].assign(w2)
+            self.weights['w3'].assign(w3)
+            self.weights['w4'].assign(w4)
+            self.weights['w5'].assign(w5)
+            init = tf.global_variables_initializer()
+
+            correct_pred = tf.equal(tf.argmax(self.nn_output, 1), tf.argmax(self.y_holder, 1))
+            accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+            session = tf.Session()
+            # with tf.Session as session:
+            session.run(init)
+            predict_y = session.run(self.nn_output, feed_dict={self.input_holder: x, self.y_holder: y})
+            mse = tf.reduce_mean(tf.square(predict_y - y))
+            mse = session.run(mse)
+
+            accuracy = session.run(accuracy, feed_dict={self.input_holder: x, self.y_holder: y})
+            self.items_test += len(x)
+            self.test_accuracy_history.append(accuracy)
+            session.close()
         else:
             raise IOError('Weight can not be loaded from model file')
 
-    def read_data(self, model_file):
-        #  TODO: This function should parse model data file and return the
-        # the input and outputs
-        x, y = [], []
-        return x, y
+    @property
+    def il_node_num(self):
+        return self._il_node_num
+
+    @il_node_num.setter
+    def il_node_num(self, value):
+        if value <= 0:
+            raise ValueError('Input layer: Number of node must greater than 0')
+        else:
+            self._il_node_num = value
+
+    @property
+    def hl1_node_num(self):
+        return self._hl1_node_num
+
+    @hl1_node_num.setter
+    def hl1_node_num(self, value):
+        if value <= 0:
+            raise ValueError('Hidden layer 1: Number of node must greater than 0')
+        else:
+            self._hl1_node_num = value
+
+    @property
+    def hl2_node_num(self):
+        return self._hl2_node_num
+
+    @hl2_node_num.setter
+    def hl2_node_num(self, value):
+        if value <= 0:
+            raise ValueError('Hidden layer 2: Number of node must greater than 0')
+        else:
+            self._hl2_node_num = value
+
+    @property
+    def hl3_node_num(self):
+        return self._hl3_node_num
+
+    @hl3_node_num.setter
+    def hl3_node_num(self, value):
+        if value <= 0:
+            raise ValueError('Hidden layer 3: Number of node must greater than 0')
+        else:
+            self._hl3_node_num = value
+
+    @property
+    def ol_node_num(self):
+        return self._ol_node_num
+
+    @ol_node_num.setter
+    def ol_node_num(self, value):
+        if value <= 0:
+            raise ValueError('Output layer: Number of node must greater than 0')
+        else:
+            self._ol_node_num = value
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+
+    @batch_size.setter
+    def batch_size(self, value):
+        if value <= 0:
+            raise ValueError('Batch size must greater than 0')
+        else:
+            self._batch_size = value
+
+    @property
+    def max_node_of_layers(self):
+        return max(self.il_node_num, self.hl1_node_num, self.hl2_node_num, self.hl3_node_num, self.ol_node_num)
+    # @property
+    # def epoch(self):
+    #     return self._epoch
+    #
+    # @epoch.setter
+    # def epoch(self, value):
+    #     if value <= 0:
+    #         raise ValueError('Epoch must greater than 0')
+    #     else:
+    #         self._epoch = value
+
+    @property
+    def label_count(self):
+        return 6
+
+    @property
+    def number_of_features(self):
+        return self.__number_of_features
+
+    @property
+    def KFOLD(self):
+        return 3
