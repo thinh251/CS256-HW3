@@ -47,6 +47,6 @@ if __name__ == "__main__":
 
     nn = NeuronNetwork(inputs, outputs, 0.01)
     nn.batch_size = 1
-    # nn.start('train', 'model_file.txt', 'data_folder')
-    # nn.start('test', 'model_file.txt', 'data_folder')
-    nn.start('5fold', 'model_file', 'data_folder')
+    nn.start('train', 'model_thinh', 'data_folder')
+    nn.start('test', 'model_thinh', 'data_folder')
+    # nn.start('5fold', 'model_file', 'data_folder')

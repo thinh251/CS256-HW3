@@ -23,23 +23,27 @@ for i in range(num_snippets):
     #create a second half perfect palinfrom
     #then do the mutations
     gene_code = []
+    gene_code_match = []
     for element in first_rand: # Generates letters for first 20 chars
         gene_code.append(letters[element])
     #generating the second half to make the string palindrome
-    gene_code_str = ''.join(gene_code) + ''.join(reversed(gene_code))
+    for i in range(len(gene_code)):
+        gene_code_match.append(util.get_correct_match(gene_code[i]))
+    gene_code_str = ''.join(gene_code) + ''.join(reversed(gene_code_match))
     for j in range(from_ends,len(gene_code_str)-from_ends):# randomly picks
                                                             # a letter
         random_int = np.random.randint(0,4)
         if j<0: j=j+len(gene_code_str) #getting rid of negative index
             # becaasue it is messing up the below replacment
-        gene_code_str = gene_code_str[:j] + letters[random_int] + gene_code_str[j+1:]
+        gene_code_str = gene_code_str[:j] + letters[random_int]+\
+                                            gene_code_str[j+1:]
     for j in range(-from_ends,from_ends): # generates letters from ends till
         # first and last sections when within the distance from start and end
         random_float = np.random.uniform()
         if random_float <= mutation_rate :
             letter = util.mutation(gene_code_str[j])
-            if j<0: j=j+len(gene_code_str) #getting rid of negative index
-            # becaasue it is messing up the below replacment
+            if j<0: j=j+len(gene_code_str) #replacing the negative index
+                        #with the equivalant positive one
             gene_code_str = gene_code_str[:j] + letter + gene_code_str[j+1:]
     output = output + gene_code_str+'\n'
 

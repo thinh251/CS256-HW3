@@ -99,7 +99,7 @@ def numberize_output_label(text):
     elif text == "STICK_PALINDROME":
         return [0, 0, 0, 0, 0, 1]
 
-
+#loads data from the file
 def load_test_data(data_folder):
     path = os.path.curdir + '/' + data_folder + '/*.txt'
     test_data = read_data(path)
@@ -138,3 +138,47 @@ def determine_sticky(input_str):
         return str(k - 1) + str(k) + '-STICKY'
     else:
         return 'STICK_PALINDROME'
+
+def get_correct_match(u):
+
+    """Returns match for the char"""
+    if u == 'A':
+        return 'C'
+    if u == 'B':
+        return 'D'
+    if u == 'C':
+        return 'A'
+    if u == 'D':
+        return 'B'
+
+def get_incorrect_match(u):
+    """Returns incorrect match for the char"""
+    random_num = np.random.randint(3)
+    if u == 'A':
+        if random_num == 0 :
+            return 'A'
+        if random_num == 1:
+            return 'B'
+        if random_num == 2:
+            return 'D'
+    if u == 'B':
+        if random_num == 0 :
+            return 'A'
+        if random_num == 1:
+            return 'B'
+        if random_num == 2:
+            return 'C'
+    if u == 'C':
+        if random_num == 0 :
+            return 'B'
+        if random_num == 1:
+            return 'C'
+        if random_num == 2:
+            return 'D'
+    if u == 'D':
+        if random_num == 0 :
+            return 'A'
+        if random_num == 1:
+            return 'C'
+        if random_num == 2:
+            return 'D'
