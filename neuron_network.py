@@ -3,6 +3,7 @@ import tensorflow as tf
 import util
 from datetime import datetime
 from datetime import timedelta
+import random
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -18,16 +19,16 @@ class NeuronNetwork(object):
         self._hl3_node_num = 2
         self._ol_node_num = 1
         self._batch_size = 1000
-        # self._epoch = 1000
+        self._epoch = 1000
         self.input_data = x  # Concrete input_holder data
         self.output_data = y   # Concrete output data
-        self.__number_of_features = len(self.input_data[0])
+        self.__number_of_features = len(self.input_data[1])
         # print 'Number of input_data: ', self.number_of_features
         self.learning_rate = epsilon
         # Hold the input_data for training and testing
-        self.input_holder = tf.placeholder(tf.float32, [None, self.number_of_features])
+        self.input_holder = tf.placeholder(tf.float32, [None, self.number_of_features], name='input-holder')
         # Hold the output_data for training and testing
-        self.y_holder = tf.placeholder(tf.float32, [None, self.label_count])
+        self.y_holder = tf.placeholder(tf.float32, [None, self.label_count], name='output-holder')
         self.__define_weight_bias()
         # Neuron network output_data
         self.nn_output = self.__build_network()
@@ -52,12 +53,12 @@ class NeuronNetwork(object):
         }
 
         self.bias = {
-            'b1': tf.Variable(tf.random_uniform(shape=(1, self.il_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32)),
-            'b2': tf.Variable(tf.random_uniform(shape=(1, self.hl1_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
-            'b3': tf.Variable(tf.random_uniform(shape=(1, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
-            'b4': tf.Variable(tf.random_uniform(shape=(1, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'b1': tf.Variable(tf.random_uniform(shape=(1, self.il_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32), name="b1"),
+            'b2': tf.Variable(tf.random_uniform(shape=(1, self.hl1_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name="b2"),
+            'b3': tf.Variable(tf.random_uniform(shape=(1, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name="b3"),
+            'b4': tf.Variable(tf.random_uniform(shape=(1, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name="b4"),
             # because we have 6 sticky label
-            'b5': tf.Variable(tf.truncated_normal(shape=(1, self.label_count), mean=0.0, stddev=1))
+            'b5': tf.Variable(tf.truncated_normal(shape=(1, self.label_count), mean=0.0, stddev=1), name='b5')
         }
 
     def __build_network(self):
@@ -109,78 +110,115 @@ class NeuronNetwork(object):
             print 'Testing time: ', datetime.now() - start_time
 
     def train(self, train_x, train_y, model_file):
-
         # Evaluate model
+        print 'Start training........'
         prediction = tf.nn.softmax(self.nn_output)
-
         # Backward propagation: update weights to minimize the cost
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
             logits=self.nn_output, labels=self.y_holder))
         optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(cost)
 
         init = tf.global_variables_initializer()
-
-        # mse, accuracy
-        b = 0
-
-        # with tf.Session as session:
-        session = tf.Session()
+        session = tf.InteractiveSession()
         session.run(init)
 
-        # batch_x, batch_y = tf.train.batch(train_x, train_y, self.batch_size)
-        session.run(optimizer, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
-        session.run(cost, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
-        correct_pred = tf.equal(tf.argmax(prediction, 1),
-                                tf.argmax(self.y_holder, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-        accuracy = session.run(accuracy, feed_dict={self.input_holder: train_x, self.y_holder: train_y})
-        self.items_trained += len(train_x)
-        self.train_accuracy_history.append(accuracy)
+        print 'W5 before training:\n'
+        print self.weights['w5'].eval()
+        print 'b1 before training:\n'
+        print self.bias['b1'].eval()
+        # mse, accuracy
+        items_count = 0
+        # with tf.Session as session:
+        time = 1
+        is_printed = False
+        for e in range(self.epoch):
+            # shuffle the data before training
+            for i in range(0, len(train_x)):
+                try:
+                    j = random.randint(i + 1, len(train_x) - 1)
+                    if i != j:
+                        train_x[i], train_x[j] = train_x[j], train_x[i]
+                        train_y[i], train_y[j] = train_y[j], train_y[i]
+                except ValueError:
+                    pass
+                    # print 'End of the list when shuffling'
+            # slice the training data into mini batches and train on these batches
 
-        np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
-        # 5 layers
-        # print("Current W: ")
-        w_matrix = np.zeros((5, self.max_node_of_layers, self.number_of_features), dtype=float)
-        # print "Initiated w_matrix:", w_matrix
-        key_list = self.weights.keys()
-        key_list.sort()
-        i = 0
-        for w in key_list:  # 5 layers
-            layer_w = np.array(self.weights[w].eval(session=session))
-            layer_w_t = layer_w.T
-            # print 'Layer: ', w, 'Shape: ', np.shape(layer_w_t)
-            d = self.number_of_features
-            if w == 'w2':
-                d = self.il_node_num
-            elif w == 'w3':
-                d = self.hl1_node_num
-            elif w == 'w4':
-                d = self.hl2_node_num
-            elif w == 'w5':
-                d = self.hl3_node_num
-            it = np.nditer(layer_w_t, flags=['f_index'])
-            while not it.finished:
-                r = it.index / d
-                c = it.index % d
-                w_matrix[i][r][c] = it[0]
-                it.iternext()
-            i += 1
+            for k in range(0, len(train_x), self.batch_size):
+                batch_x = train_x[k:k + self.batch_size]
+                batch_y = train_y[k:k + self.batch_size]
+                session.run(optimizer,
+                            feed_dict={self.input_holder: batch_x,
+                                       self.y_holder: batch_y})
 
-        # print w_matrix
-        # saver = tf.train.Saver([self.weights['w1'], self.weights['w2'], self.weights['w3'], self.weights['w4'], self.weights['w5']])
-        saver = tf.train.Saver([self.weights['w1'], self.weights['w2'], self.weights['w3'], self.weights['w4'], self.weights['w5']])
+                correct_pred = tf.equal(tf.argmax(prediction, 1),
+                                        tf.argmax(self.y_holder, 1))
+                accuracy = tf.reduce_mean(
+                    tf.cast(correct_pred, tf.float32))
+                accuracy = session.run(accuracy,
+                                       feed_dict={
+                                           self.input_holder: train_x,
+                                           self.y_holder: train_y})
+                self.items_trained += len(train_x)
+                self.train_accuracy_history.append(accuracy)
+                items_count += len(batch_x)
+                jp = items_count / 1000
+                if items_count > (time * 1000) and not is_printed:
+                    print str(items_count - (items_count % 1000)) + ' items processed'
+                    is_printed = True
+                    time += 1
+                elif jp >= time:
+                    is_printed = False
+
+        # Save the optimized weights and the biases to the model file
+        # saver = tf.train.Saver(
+        #     [self.weights['w1'], self.weights['w2'], self.weights['w3'],
+        #      self.weights['w4'], self.weights['w5']])
+        saver = tf.train.Saver()
         saver.save(session, model_file)
-        print 'W1-trained:\n', session.run(self.weights['w5'])
+        print 'W5-trained:\n', session.run(self.weights['w5'])
+        print 'b1-trained:\n', session.run(self.bias['b1'])
+        session.close()
         # region Save model file using numpy
-        # Open model file in overwrite mode
+        # this is our first naive approach which requires to manipulate the
+        # matrices dimenssions
+        # np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
+        # # 5 layers
+        # # print("Current W: ")
+        # w_matrix = np.zeros((5, self.max_node_of_layers, self.number_of_features), dtype=float)
+        # # print "Initiated w_matrix:", w_matrix
+        # key_list = self.weights.keys()
+        # key_list.sort()
+        # i = 0
+        # for w in key_list:  # 5 layers
+        #     layer_w = np.array(self.weights[w].eval(session=session))
+        #     layer_w_t = layer_w.T
+        #     # print 'Layer: ', w, 'Shape: ', np.shape(layer_w_t)
+        #     d = self.number_of_features
+        #     if w == 'w2':
+        #         d = self.il_node_num
+        #     elif w == 'w3':
+        #         d = self.hl1_node_num
+        #     elif w == 'w4':
+        #         d = self.hl2_node_num
+        #     elif w == 'w5':
+        #         d = self.hl3_node_num
+        #     it = np.nditer(layer_w_t, flags=['f_index'])
+        #     while not it.finished:
+        #         r = it.index / d
+        #         c = it.index % d
+        #         w_matrix[i][r][c] = it[0]
+        #         it.iternext()
+        #     i += 1
+        # print w_matrix
         # with open(model_file, 'w') as f:
         #     s = 1
         #     for data_slice in w_matrix:
         #         f.write('#w' + str(s) + '\n')
         #         np.savetxt(f, data_slice, fmt='%2.3f')
         #         s += 1
+        # session.close()
         # endregion
-        session.close()
 
     def kfold(self, x, y, k, model_file):
         """Split the input_texts data into k parts and do cross-validation
@@ -274,16 +312,23 @@ class NeuronNetwork(object):
         # Test load checkpoint file which is saved from training step
         saver = tf.train.import_meta_graph(model_file + '.meta')
         saver.restore(session, tf.train.latest_checkpoint('./'))
-        # print 'W1: \n', session.run('w1:0')
-        # print 'W2: \n', session.run('w2:0')
-        # print 'W3: \n', session.run('w3:0')
-        # print 'W4: \n', session.run('w4:0')
-        print 'W5: \n', session.run('w5:0')
+        print 'b1: \n', session.run('b1:0')
+        # print 'b2: \n', session.run('b2:0')
+        # print 'b3: \n', session.run('b3:0')
+        # print 'b4: \n', session.run('b4:0')
+        # print 'b5: \n', session.run('b5:0')
+        # Assign the weights which are loaded from model file
         self.weights['w1'].assign(session.run('w1:0'))
         self.weights['w2'].assign(session.run('w2:0'))
         self.weights['w3'].assign(session.run('w3:0'))
         self.weights['w4'].assign(session.run('w4:0'))
         self.weights['w5'].assign(session.run('w5:0'))
+        # Assign the biases which are loaded from model file
+        self.bias['b1'].assign(session.run('b1:0'))
+        self.bias['b2'].assign(session.run('b2:0'))
+        self.bias['b3'].assign(session.run('b3:0'))
+        self.bias['b4'].assign(session.run('b4:0'))
+        self.bias['b5'].assign(session.run('b5:0'))
         init = tf.global_variables_initializer()
 
         correct_pred = tf.equal(tf.argmax(self.nn_output, 1),
@@ -374,16 +419,17 @@ class NeuronNetwork(object):
     @property
     def max_node_of_layers(self):
         return max(self.il_node_num, self.hl1_node_num, self.hl2_node_num, self.hl3_node_num, self.ol_node_num)
-    # @property
-    # def epoch(self):
-    #     return self._epoch
-    #
-    # @epoch.setter
-    # def epoch(self, value):
-    #     if value <= 0:
-    #         raise ValueError('Epoch must greater than 0')
-    #     else:
-    #         self._epoch = value
+
+    @property
+    def epoch(self):
+        return self._epoch
+
+    @epoch.setter
+    def epoch(self, value):
+        if value <= 0:
+            raise ValueError('Epoch must greater than 0')
+        else:
+            self._epoch = value
 
     @property
     def label_count(self):
