@@ -43,12 +43,12 @@ class NeuronNetwork(object):
         """
         # Weights of the network is a matrix of 4 x max number of node in a layer
         self.weights = {
-            'w1': tf.Variable(tf.random_uniform(shape=(self.number_of_features, self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
-            'w2': tf.Variable(tf.random_uniform(shape=(self.il_node_num, self.hl1_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32)),
-            'w3': tf.Variable(tf.random_uniform(shape=(self.hl1_node_num, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
-            'w4': tf.Variable(tf.random_uniform(shape=(self.hl2_node_num, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32)),
+            'w1': tf.Variable(tf.random_uniform(shape=(self.number_of_features, self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w1'),
+            'w2': tf.Variable(tf.random_uniform(shape=(self.il_node_num, self.hl1_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32), name='w2'),
+            'w3': tf.Variable(tf.random_uniform(shape=(self.hl1_node_num, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w3'),
+            'w4': tf.Variable(tf.random_uniform(shape=(self.hl2_node_num, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w4'),
             # because we have 6 sticky label
-            'w5': tf.Variable(tf.truncated_normal(shape=(self.hl3_node_num, self.ol_node_num), mean=0.0, stddev=1))
+            'w5': tf.Variable(tf.truncated_normal(shape=(self.hl3_node_num, self.ol_node_num), mean=0.0, stddev=1), name='w5')
         }
 
         self.bias = {
@@ -103,6 +103,7 @@ class NeuronNetwork(object):
             test_x, test_y = util.load_test_data(data_folder)
             start_time = datetime.now()
             self.test(test_x, test_y, model_file)
+            # self.test_load_model()
             print 'Testing completed!'
             print 'Accuracy:', np.mean(self.test_accuracy_history)
             print 'Testing time: ', datetime.now() - start_time
@@ -167,6 +168,7 @@ class NeuronNetwork(object):
 
         # print w_matrix
 
+        # region Save model file using numpy
         # Open model file in overwrite mode
         with open(model_file, 'w') as f:
             s = 1
@@ -174,6 +176,7 @@ class NeuronNetwork(object):
                 f.write('#w' + str(s) + '\n')
                 np.savetxt(f, data_slice, fmt='%2.3f')
                 s += 1
+        # endregion
         session.close()
 
     def kfold(self, x, y, k, model_file):
@@ -219,6 +222,7 @@ class NeuronNetwork(object):
 
     def test(self, x, y, model_file):
         # print 'Before assigning weight:', self.weights['w1']
+
         full_path = os.path.join(os.path.curdir, model_file)
         w = np.loadtxt(full_path)
         w = np.reshape(w, (5, self.max_node_of_layers, self.number_of_features))
@@ -256,9 +260,36 @@ class NeuronNetwork(object):
             accuracy = session.run(accuracy, feed_dict={self.input_holder: x, self.y_holder: y})
             self.items_test += len(x)
             self.test_accuracy_history.append(accuracy)
+
             session.close()
         else:
             raise IOError('Weight can not be loaded from model file')
+
+    def test_load_model(self):
+        session = tf.Session()
+        # Test load checkpoint file which is saved from training step
+        # r1 = self.weights['w1']
+        # w1 = tf.Variable(tf.random_uniform(shape=(self.number_of_features, self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w1')
+        # w2 = tf.Variable(tf.random_uniform(shape=(self.il_node_num, self.hl1_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32), name='w2')
+        # w3 = tf.Variable(tf.random_uniform(shape=(self.hl1_node_num, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w3')
+        # w4 = tf.Variable(tf.random_uniform(shape=(self.hl2_node_num, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w4')
+        # w5 = tf.Variable(tf.truncated_normal(shape=(self.hl3_node_num, self.ol_node_num), mean=0.0, stddev=1), name='w5')
+        # saver = tf.train.Saver()
+        saver = tf.train.import_meta_graph('model_saver.ckpt.meta')
+        saver.restore(session, tf.train.latest_checkpoint('./'))
+        # all_weights = tf.get_collection('weights')
+        # saver.restore(session, 'model_saver.ckpt')
+        print 'W1: \n', session.run('w1:0')
+        print 'W2: \n', session.run('w2:0')
+        print 'W3: \n', session.run('w3:0')
+        print 'W4: \n', session.run('w4:0')
+        print 'W5: \n', session.run('w5:0')
+
+        # print(session.run(['w1', 'w2', 'w3', 'w4', 'w5']))
+        # weights = session.run(['w1', 'w2', 'w3', 'w4', 'w5'])
+        # print weights
+        # print 'Weight 1:', r1.eval()
+        session.close()
 
     @property
     def il_node_num(self):
