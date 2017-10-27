@@ -102,10 +102,10 @@ class NeuronNetwork(object):
         elif mode == 'test':
             test_x, test_y = util.load_test_data(data_folder)
             start_time = datetime.now()
+            # self.test_load_manually(test_x, test_y, model_file)
             self.test(test_x, test_y, model_file)
-            # self.test_load_model()
             print 'Testing completed!'
-            print 'Accuracy:', np.mean(self.test_accuracy_history)
+            # print 'Accuracy:', np.mean(self.test_accuracy_history)
             print 'Testing time: ', datetime.now() - start_time
 
     def train(self, train_x, train_y, model_file):
@@ -167,15 +167,18 @@ class NeuronNetwork(object):
             i += 1
 
         # print w_matrix
-
+        # saver = tf.train.Saver([self.weights['w1'], self.weights['w2'], self.weights['w3'], self.weights['w4'], self.weights['w5']])
+        saver = tf.train.Saver([self.weights['w1'], self.weights['w2'], self.weights['w3'], self.weights['w4'], self.weights['w5']])
+        saver.save(session, model_file)
+        print 'W1-trained:\n', session.run(self.weights['w5'])
         # region Save model file using numpy
         # Open model file in overwrite mode
-        with open(model_file, 'w') as f:
-            s = 1
-            for data_slice in w_matrix:
-                f.write('#w' + str(s) + '\n')
-                np.savetxt(f, data_slice, fmt='%2.3f')
-                s += 1
+        # with open(model_file, 'w') as f:
+        #     s = 1
+        #     for data_slice in w_matrix:
+        #         f.write('#w' + str(s) + '\n')
+        #         np.savetxt(f, data_slice, fmt='%2.3f')
+        #         s += 1
         # endregion
         session.close()
 
@@ -220,7 +223,8 @@ class NeuronNetwork(object):
             testing_time += duration
         return training_time, testing_time
 
-    def test(self, x, y, model_file):
+    def test_load_manually(self, x, y, model_file):
+        """This is the original version which load model file manually"""
         # print 'Before assigning weight:', self.weights['w1']
 
         full_path = os.path.join(os.path.curdir, model_file)
@@ -265,30 +269,40 @@ class NeuronNetwork(object):
         else:
             raise IOError('Weight can not be loaded from model file')
 
-    def test_load_model(self):
+    def test(self, x, y, model_file):
         session = tf.Session()
         # Test load checkpoint file which is saved from training step
-        # r1 = self.weights['w1']
-        # w1 = tf.Variable(tf.random_uniform(shape=(self.number_of_features, self.il_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w1')
-        # w2 = tf.Variable(tf.random_uniform(shape=(self.il_node_num, self.hl1_node_num),  minval=-1.0, maxval=1.0, dtype=tf.float32), name='w2')
-        # w3 = tf.Variable(tf.random_uniform(shape=(self.hl1_node_num, self.hl2_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w3')
-        # w4 = tf.Variable(tf.random_uniform(shape=(self.hl2_node_num, self.hl3_node_num), minval=-1.0, maxval=1.0, dtype=tf.float32), name='w4')
-        # w5 = tf.Variable(tf.truncated_normal(shape=(self.hl3_node_num, self.ol_node_num), mean=0.0, stddev=1), name='w5')
-        # saver = tf.train.Saver()
-        saver = tf.train.import_meta_graph('model_saver.ckpt.meta')
+        saver = tf.train.import_meta_graph(model_file + '.meta')
         saver.restore(session, tf.train.latest_checkpoint('./'))
-        # all_weights = tf.get_collection('weights')
-        # saver.restore(session, 'model_saver.ckpt')
-        print 'W1: \n', session.run('w1:0')
-        print 'W2: \n', session.run('w2:0')
-        print 'W3: \n', session.run('w3:0')
-        print 'W4: \n', session.run('w4:0')
+        # print 'W1: \n', session.run('w1:0')
+        # print 'W2: \n', session.run('w2:0')
+        # print 'W3: \n', session.run('w3:0')
+        # print 'W4: \n', session.run('w4:0')
         print 'W5: \n', session.run('w5:0')
+        self.weights['w1'].assign(session.run('w1:0'))
+        self.weights['w2'].assign(session.run('w2:0'))
+        self.weights['w3'].assign(session.run('w3:0'))
+        self.weights['w4'].assign(session.run('w4:0'))
+        self.weights['w5'].assign(session.run('w5:0'))
+        init = tf.global_variables_initializer()
 
-        # print(session.run(['w1', 'w2', 'w3', 'w4', 'w5']))
-        # weights = session.run(['w1', 'w2', 'w3', 'w4', 'w5'])
-        # print weights
-        # print 'Weight 1:', r1.eval()
+        correct_pred = tf.equal(tf.argmax(self.nn_output, 1),
+                                tf.argmax(self.y_holder, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+        session = tf.Session()
+        # with tf.Session as session:
+        session.run(init)
+        predict_y = session.run(self.nn_output,
+                                feed_dict={self.input_holder: x,
+                                           self.y_holder: y})
+        mse = tf.reduce_mean(tf.square(predict_y - y))
+        mse = session.run(mse)
+
+        accuracy = session.run(accuracy, feed_dict={self.input_holder: x,
+                                                    self.y_holder: y})
+        self.items_test += len(x)
+        self.test_accuracy_history.append(accuracy)
+
         session.close()
 
     @property
