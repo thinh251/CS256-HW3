@@ -1,5 +1,6 @@
 import string
 import sys
+import numpy as np
 import util
 from neuron_network import NeuronNetwork
 
@@ -35,18 +36,26 @@ if __name__ == "__main__":
     # input_texts[4] : 78-STICK
     # input_texts[5] : PALINDROME - STICK
 
-    input_texts = ['BACBDCBDBBACBACDADDCABBCBACDACDDBDABDACD',
-              'BACBDCBDBBACBACDADDCABBCBACDACDDBDABDAAD',
-              'BACDDCBDBBACBACDADDCABBCBACDACDDBDABDACD']
-    inputs = []
+    # input_texts = ['BACBDCBDBBACBACDADDCABBCBACDACDDBDABDACD',
+    #                'BACBDCBDBBACBACDADDCABBCBACDACDDBDABDAAD',
+    #                'BACDDCBDBBACBACDADDCABBCBACDACDDBDABDACD']
 
-    for i in input_texts:
-        e = util.string_to_ascii(i)
-        inputs.append(e)
-    outputs = [[0.0, 0.0, 0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]]
+    # for i in input_texts:
+    #     e = util.string_to_ascii(i)
+    #     inputs.append(e)
+    # outputs = [[0.0, 0.0, 0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]]
+    # test_size = 10000
+    # test_number_of_features = 40
+    # test_number_of_labels = 6
+    # inputs = np.random.randint(low=65, high=68, size=(test_size, test_number_of_features))
+    # outputs = np.random.randint(low=0, high=1, size=(test_size, test_number_of_labels))
+    # print 'outputs:', outputs
+    # print 'Output:', outputs
 
+    inputs, outputs = util.load_test_data('data_folder')
     nn = NeuronNetwork(inputs, outputs, 0.01)
-    nn.batch_size = 1
-    nn.start('train', 'model_thinh', 'data_folder')
-    nn.start('test', 'model_thinh', 'data_folder')
+    nn.batch_size = 128
+    nn.epoch = 5
+    nn.start('train', 'model_thinh.txt', 'data_folder')
+    # nn.start('test', 'model_thinh.txt', 'data_folder')
     # nn.start('5fold', 'model_file', 'data_folder')

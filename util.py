@@ -3,10 +3,14 @@ import os
 
 import numpy as np
 
+sticky_def = {'NON': 'NONSTICK', '12': '12-STICKY', '34': '34-STICKY',
+              '56': '56-STICKY', '78': '78-STICKY',
+              'PAL': 'STICK_PALINDROME'}
 
-def sticks_with(u,v):
+
+def sticks_with(u, v):
     """returns 1 if two strings stick. 0 otherwise."""
-    if len(u) != len(v): # length should be same for strings to stick.
+    if len(u) != len(v):  # length should be same for strings to stick.
         return 0
     else:
         U = list(u)
@@ -28,25 +32,28 @@ def sticks_with(u,v):
 
 
 def sticky_type(input):
-    for k in range(len(input)/2):
-        if sticks_with(input[k],input[-k-1]) == 0:
+    for k in range(len(input) / 2):
+        if sticks_with(input[k], input[-k - 1]) == 0:
             return sticky_index(k)
 
 
 def sticky_index(k):
-    if k == 0 : return "Non-Stikcy"
-    if k in [1,2]: return "12-STICKY"
-    if k in [3,4]: return "34-STICKY"
-    if k in [5,6]: return "56-STICKY"
-    if k in [7,8]: return "78-STICKY"
-    else: return "STICK_PALINDROME"
+    if k == 0: return sticky_def['NON']
+    if k in [1, 2]: return sticky_def['12']
+    if k in [3, 4]: return sticky_def['34']
+    if k in [5, 6]: return sticky_def['56']
+    if k in [7, 8]:
+        return sticky_def['78']
+    else:
+        return sticky_def['PAL']
 
 
 def mutation(letter):
     """returns a mutation for a letter randomly among the other letters"""
     letters = "ABCD"
     random_index = np.random.randint(3)
-    return letters.replace(letter,"")[random_index]
+    return letters.replace(letter, "")[random_index]
+
 
 def check_line_length(text_file, n):
     """Check length of individual line in file if a length is != n,
@@ -73,6 +80,7 @@ def read_data(data_folder):
                     lines.append(t)
                     # TODO:
                     something.append(lines)
+            print 'All the data in ', f, ' file are loaded'
     return something
 
 
@@ -86,20 +94,21 @@ def string_to_ascii(text):
 
 
 def numberize_output_label(text):
-    if text == 'NONSTICK':
-        return [1, 0 ,0, 0, 0, 0]
-    elif text == "12-STICKY":
+    if text == sticky_def['NON']:
+        return [1, 0, 0, 0, 0, 0]
+    elif text == sticky_def['12']:
         return [0, 1, 0, 0, 0, 0]
-    elif text == "34-STICKY":
+    elif text == sticky_def['34']:
         return [0, 0, 1, 0, 0, 0]
-    elif text == "56-STICKY":
+    elif text == sticky_def['56']:
         return [0, 0, 0, 1, 0, 0]
-    elif text == "78-STICKY":
+    elif text == sticky_def['78']:
         return [0, 0, 0, 0, 1, 0]
-    elif text == "STICK_PALINDROME":
+    elif text == sticky_def['PAL']:
         return [0, 0, 0, 0, 0, 1]
 
-#loads data from the file
+
+# loads data from the file
 def load_test_data(data_folder):
     path = os.path.curdir + '/' + data_folder + '/*.txt'
     test_data = read_data(path)
@@ -112,7 +121,9 @@ def load_test_data(data_folder):
         test_x.append(features)
         output = numberize_output_label(label)
         test_y.append(output)
+
     return test_x, test_y
+
 
 def determine_sticky(input_str):
     """Determine the sticky label of a string"""
@@ -123,9 +134,9 @@ def determine_sticky(input_str):
     # w_reverse = w[::-1]  # reverse w
     k = 1
     is_stick = True
-    while is_stick and k <= len(input_str)/2:
+    while is_stick and k <= len(input_str) / 2:
         u = input_str[:k]
-        v_len = len(input_str) - 2*k
+        v_len = len(input_str) - 2 * k
         w = input_str[v_len + k:]
         w_reverse = w[::-1]
         is_stick = sticks_with(u, w_reverse)
@@ -133,14 +144,14 @@ def determine_sticky(input_str):
             k += 1
 
     if k == 1:
-        return 'NONSTICK'
-    elif k < len(input_str)/2:
+        return sticky_def['NON']
+    elif k < len(input_str) / 2:
         return str(k - 1) + str(k) + '-STICKY'
     else:
         return 'STICK_PALINDROME'
 
-def get_correct_match(u):
 
+def get_correct_match(u):
     """Returns match for the char"""
     if u == 'A':
         return 'C'
@@ -151,32 +162,33 @@ def get_correct_match(u):
     if u == 'D':
         return 'B'
 
+
 def get_incorrect_match(u):
     """Returns incorrect match for the char"""
     random_num = np.random.randint(3)
     if u == 'A':
-        if random_num == 0 :
+        if random_num == 0:
             return 'A'
         if random_num == 1:
             return 'B'
         if random_num == 2:
             return 'D'
     if u == 'B':
-        if random_num == 0 :
+        if random_num == 0:
             return 'A'
         if random_num == 1:
             return 'B'
         if random_num == 2:
             return 'C'
     if u == 'C':
-        if random_num == 0 :
+        if random_num == 0:
             return 'B'
         if random_num == 1:
             return 'C'
         if random_num == 2:
             return 'D'
     if u == 'D':
-        if random_num == 0 :
+        if random_num == 0:
             return 'A'
         if random_num == 1:
             return 'C'
