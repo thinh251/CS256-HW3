@@ -47,7 +47,6 @@ for i in range(num_snippets):
             gene_code_str = gene_code_str[:j] + letter + gene_code_str[j+1:]
     output = output + gene_code_str+'\n'
 
-print output
 F = open(output_file,'w')
 F.write(''.join(output))
 F.close()
