@@ -81,6 +81,8 @@ def read_data(data_folder):
                     # TODO:
                     something.append(lines)
             print 'All the data in ', f, ' file are loaded'
+        else:
+            print 'The snippet length is not correct in ', f
     return something
 
 

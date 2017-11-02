@@ -13,13 +13,14 @@ class NeuronNetwork(object):
     def __init__(self, x, y, epsilon):
         super(NeuronNetwork, self).__init__()
         # self.input_texts = tf.placeholder(tf.float32, [None, len(x)])
-        self._il_node_num = 5
-        self._hl1_node_num = 4
-        self._hl2_node_num = 3
-        self._hl3_node_num = 2
-        self._ol_node_num = 1
-        self._batch_size = 1000
-        self._epoch = 1000
+        self.__il_node_num = 5
+        self.__hl1_node_num = 4
+        self.__hl2_node_num = 3
+        self.__hl3_node_num = 2
+        self.__ol_node_num = 1
+        self.__mini_batch_size = 1000
+        self.__epoch = 1000
+        self.__kfold = 5
         self.input_data = x  # Concrete input_holder data
         self.output_data = y   # Concrete output data
         self.__number_of_features = len(self.input_data[1])
@@ -36,6 +37,7 @@ class NeuronNetwork(object):
         self.train_accuracy_history = []
         self.items_trained = 0
         self.items_test = 0
+        self.__confusion_matrix = {'TPR': 0, 'FPR': 0, 'FNR': 0, 'TNR': 0}
 
     def __define_weight_bias(self):
         """Define the weights and bias of layers
@@ -81,55 +83,55 @@ class NeuronNetwork(object):
         return output_layer
 
     # def start(self, mode, model_file.txt, data_folder):
-    def start(self, mode, model_file, data_folder):
+    def start(self, mode, model_file):
         # x, y = util.read_data(data_folder)
         if mode == 'train':
+            print 'Start training........'
             start_time = datetime.now()
-            self.train(self.input_data, self.output_data, model_file)
+            self.train(self.input_data, self.output_data, model_file, True)
             print 'Processing completed:\n',
             print self.items_trained, 'item(s) trained,'
-            print self.items_test, 'item(s) tested'
-            print 'Accuracy: ', np.mean(self.train_accuracy_history)
             print 'Training time: ', datetime.now() - start_time
         elif mode == '5fold':
-            training_time, testing_time = self.kfold(self.input_data, self.output_data, self.KFOLD, model_file)
+            training_time, testing_time = self.cross_validate_optimized(
+                self.input_data, self.output_data, self.kfold, model_file)
             print '5fold completed!!!'
-            print len(self.input_data), 'item(s) trained,'
-            print self.items_test, 'item(s) tested'
-            print 'Training accuracy: ', np.mean(self.train_accuracy_history)
+            print self.items_trained, ' item(s) trained,'
+            print self.items_test, ' item(s) tested'
+            # print 'Training accuracy: ', np.mean(self.train_accuracy_history)
             print 'Testing accuracy: ', np.mean(self.test_accuracy_history)
             print 'Training time: ', training_time
             print 'Testing time: ', training_time
         elif mode == 'test':
-            test_x, test_y = util.load_test_data(data_folder)
+            # test_x, test_y = util.load_test_data(data_folder)
             start_time = datetime.now()
-            # self.test_load_manually(test_x, test_y, model_file)
-            self.test(test_x, test_y, model_file)
+            self.test(self.input_data, self.output_data, model_file)
             print 'Testing completed!'
-            # print 'Accuracy:', np.mean(self.test_accuracy_history)
+            print self.items_test, ' item(s) tested'
+            print 'Accuracy:', self.test_accuracy_history
             print 'Testing time: ', datetime.now() - start_time
 
-    def train(self, train_x, train_y, model_file):
+    def train(self, train_x, train_y, model_file, write_to_file):
+        """Write to file flag to write the weight to model file
+            for example: train only model this flag is on
+            5fold mode: at the 5th dataset, this flag need to turn on to save the weight
+        """
         # Evaluate model
-        print 'Start training........'
+        self.items_trained = 0
         prediction = tf.nn.softmax(self.nn_output)
-        # Backward propagation: update weights to minimize the cost
+        # Backward propagation: update weights to minimize the cost using
+        # cross_entropy
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
             logits=self.nn_output, labels=self.y_holder))
         optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(cost)
 
         init = tf.global_variables_initializer()
-        session = tf.InteractiveSession()
+        session = tf.Session()
         session.run(init)
-
-        print 'W5 before training:\n'
-        print self.weights['w5'].eval()
-        print 'b1 before training:\n'
-        print self.bias['b1'].eval()
-        # mse, accuracy
+        # Count the number of training items
         items_count = 0
-        # with tf.Session as session:
-        time = 1
+        # Mark the 1000 items step to print number of processed item
+        grand = 1
         is_printed = False
         for e in range(self.epoch):
             # shuffle the data before training
@@ -142,8 +144,8 @@ class NeuronNetwork(object):
                 except ValueError:
                     pass
                     # print 'End of the list when shuffling'
+            
             # slice the training data into mini batches and train on these batches
-
             for k in range(0, len(train_x), self.batch_size):
                 batch_x = train_x[k:k + self.batch_size]
                 batch_y = train_y[k:k + self.batch_size]
@@ -157,31 +159,32 @@ class NeuronNetwork(object):
                     tf.cast(correct_pred, tf.float32))
                 accuracy = session.run(accuracy,
                                        feed_dict={
-                                           self.input_holder: train_x,
-                                           self.y_holder: train_y})
+                                           self.input_holder: batch_x,
+                                           self.y_holder: batch_y})
+
                 self.items_trained += len(train_x)
-                self.train_accuracy_history.append(accuracy)
+                # The homework does not require to calculate the training accuracy
+                # self.train_accuracy_history.append(accuracy)
                 items_count += len(batch_x)
                 jp = items_count / 1000
-                if items_count > (time * 1000) and not is_printed:
+                if items_count > (grand * 1000) and not is_printed:
                     print str(items_count - (items_count % 1000)) + ' items processed'
                     is_printed = True
-                    time += 1
-                elif jp >= time:
+                    grand += 1
+                elif jp >= grand:
                     is_printed = False
 
         # Save the optimized weights and the biases to the model file
-        # saver = tf.train.Saver(
-        #     [self.weights['w1'], self.weights['w2'], self.weights['w3'],
-        #      self.weights['w4'], self.weights['w5']])
-        saver = tf.train.Saver()
-        saver.save(session, model_file)
-        print 'W5-trained:\n', session.run(self.weights['w5'])
-        print 'b1-trained:\n', session.run(self.bias['b1'])
+        if write_to_file:
+            print 'Save to file'
+            saver = tf.train.Saver([self.weights['w1'], self.weights['w2'], self.weights['w3'], self.weights['w4'], self.weights['w5']])
+            saver.save(session, model_file)
+        # print 'W5-trained:\n', session.run(self.weights['w5'])
+        # print 'b1-trained:\n', session.run(self.bias['b1'])
         session.close()
-        # region Save model file using numpy
-        # this is our first naive approach which requires to manipulate the
-        # matrices dimenssions
+        self.items_trained = items_count
+        # region This is our first naive approach to save model file using numpy
+        # which requires to manipulate the matrices dimenssions
         # np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
         # # 5 layers
         # # print("Current W: ")
@@ -220,7 +223,7 @@ class NeuronNetwork(object):
         # session.close()
         # endregion
 
-    def kfold(self, x, y, k, model_file):
+    def cross_validate(self, x, y, k, model_file):
         """Split the input_texts data into k parts and do cross-validation
             - Pick 1 part as  test data
             - (k - 1) parts as training data
@@ -231,10 +234,6 @@ class NeuronNetwork(object):
         self.items_test = 0
         self.items_trained = 0
         row = len(x)
-        #  x = np.arange(96).reshape(32, 3)
-        #  y = np.arange(96).reshape(32, 3)
-        # print 'X:', x
-        # print 'Y:', y
         block = row / k
         # print 'Block:', block
         training_time = timedelta(0, 0, 0)
@@ -251,8 +250,12 @@ class NeuronNetwork(object):
             train_y = np.delete(y, np.s_[i * block: (i + 1) * block], axis=0)
             # print 'Train Y:', i, train_y
             start_time = datetime.now()
-
-            self.train(train_x, train_y, model_file)
+            if i < k - 1:
+                print 'Training on ', str(i + 1), 'fold....'
+                self.train(train_x, train_y, model_file, False)
+            else:
+                print 'Training on ', str(i + 1), 'fold....'
+                self.train(train_x, train_y, model_file, True)
             duration = datetime.now() - start_time
             training_time += duration
             start_time = datetime.now()
@@ -260,6 +263,104 @@ class NeuronNetwork(object):
             duration = datetime.now() - start_time
             testing_time += duration
         return training_time, testing_time
+
+    def cross_validate_optimized(self, x, y, k, model_file):
+        # Clear the history
+        self.test_accuracy_history = []
+        self.train_accuracy_history = []
+        self.items_test = 0
+        self.items_trained = 0
+        prediction = tf.nn.softmax(self.nn_output)
+        # Backward propagation: update weights to minimize the cost using
+        # cross_entropy
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+            logits=self.nn_output, labels=self.y_holder))
+        optimizer = tf.train.GradientDescentOptimizer(
+            self.learning_rate).minimize(cost)
+
+        init = tf.global_variables_initializer()
+        session = tf.Session()
+        session.run(init)
+        row = len(x)
+        block = row / k
+        # print 'Block:', block
+        training_time = timedelta(0, 0, 0)
+        testing_time = timedelta(0, 0, 0)
+        items_count = 0
+        # Mark the 1000 items step to print number of processed item
+        grand = 1
+        is_printed = False
+        for i in range(k):
+            sl_i = slice(i * block, (i + 1) * block)
+            text_x = x[sl_i]
+            # print 'Test X:', i, text_x
+            test_y = y[sl_i]
+            # test_y = np.split(y, [i*k, (i + 1) * k], axis=0)
+            # print 'Test Y:', i, test_y
+            train_x = np.delete(x, np.s_[i * block: (i + 1) * block], axis=0)
+            # print 'Train X:', i, train_x
+            train_y = np.delete(y, np.s_[i * block: (i + 1) * block], axis=0)
+            # print 'Train Y:', i, train_y
+            print 'Start training on Si except S[', i, ']'
+            start_time = datetime.now()
+            for e in range(self.epoch):
+                # shuffle the data before training
+                for r in range(0, len(train_x)):
+                    try:
+                        j = random.randint(r + 1, len(train_x) - 1)
+                        if r != j:
+                            train_x[r], train_x[j] = train_x[j], train_x[r]
+                            train_y[r], train_y[j] = train_y[j], train_y[r]
+                    except ValueError:
+                        pass
+                        # print 'End of the list when shuffling'
+
+                # slice the training data into mini batches and train on these batches
+                for b in range(0, len(train_x), self.batch_size):
+                    batch_x = train_x[b:b + self.batch_size]
+                    batch_y = train_y[b:b + self.batch_size]
+                    session.run(optimizer,
+                                feed_dict={self.input_holder: batch_x,
+                                           self.y_holder: batch_y})
+
+                    correct_pred = tf.equal(tf.argmax(prediction, 1),
+                                            tf.argmax(self.y_holder, 1))
+                    accuracy = tf.reduce_mean(
+                        tf.cast(correct_pred, tf.float32))
+                    accuracy = session.run(accuracy,
+                                           feed_dict={
+                                               self.input_holder: batch_x,
+                                               self.y_holder: batch_y})
+
+                    self.items_trained += len(train_x)
+                    # The homework does not require to calculate the training accuracy
+                    # self.train_accuracy_history.append(accuracy)
+                    items_count += len(batch_x)
+                    jp = items_count / 1000
+                    if items_count > (grand * 1000) and not is_printed:
+                        print str(items_count - (
+                        items_count % 1000)) + ' items processed'
+                        is_printed = True
+                        grand += 1
+                    elif jp >= grand:
+                        is_printed = False
+
+            duration = datetime.now() - start_time
+            training_time += duration
+            print 'Start testing on S[', i, '] data'
+            start_time = datetime.now()
+            correct_pred = tf.equal(tf.argmax(self.nn_output, 1),
+                                    tf.argmax(self.y_holder, 1))
+            accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+            accuracy = session.run(accuracy, feed_dict={self.input_holder: text_x,
+                                                        self.y_holder: test_y})
+            self.items_test += len(text_x)
+            self.test_accuracy_history.append(accuracy)
+
+            duration = datetime.now() - start_time
+            testing_time += duration
+        return training_time, testing_time
+
 
     def test_load_manually(self, x, y, model_file):
         """This is the original version which load model file manually"""
@@ -309,14 +410,13 @@ class NeuronNetwork(object):
 
     def test(self, x, y, model_file):
         session = tf.Session()
-        # Test load checkpoint file which is saved from training step
+        init = tf.global_variables_initializer()
+        session.run(init)
+        # Load checkpoint file which is saved from training step
         saver = tf.train.import_meta_graph(model_file + '.meta')
         saver.restore(session, tf.train.latest_checkpoint('./'))
-        print 'b1: \n', session.run('b1:0')
-        # print 'b2: \n', session.run('b2:0')
-        # print 'b3: \n', session.run('b3:0')
-        # print 'b4: \n', session.run('b4:0')
-        # print 'b5: \n', session.run('b5:0')
+        # print 'b1: \n', session.run('b1:0')
+
         # Assign the weights which are loaded from model file
         self.weights['w1'].assign(session.run('w1:0'))
         self.weights['w2'].assign(session.run('w2:0'))
@@ -324,97 +424,91 @@ class NeuronNetwork(object):
         self.weights['w4'].assign(session.run('w4:0'))
         self.weights['w5'].assign(session.run('w5:0'))
         # Assign the biases which are loaded from model file
-        self.bias['b1'].assign(session.run('b1:0'))
-        self.bias['b2'].assign(session.run('b2:0'))
-        self.bias['b3'].assign(session.run('b3:0'))
-        self.bias['b4'].assign(session.run('b4:0'))
-        self.bias['b5'].assign(session.run('b5:0'))
-        init = tf.global_variables_initializer()
+        # self.bias['b1'].assign(session.run('b1:0'))
+        # self.bias['b2'].assign(session.run('b2:0'))
+        # self.bias['b3'].assign(session.run('b3:0'))
+        # self.bias['b4'].assign(session.run('b4:0'))
+        # self.bias['b5'].assign(session.run('b5:0'))
 
         correct_pred = tf.equal(tf.argmax(self.nn_output, 1),
                                 tf.argmax(self.y_holder, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-        session = tf.Session()
-        # with tf.Session as session:
-        session.run(init)
-        predict_y = session.run(self.nn_output,
-                                feed_dict={self.input_holder: x,
-                                           self.y_holder: y})
-        mse = tf.reduce_mean(tf.square(predict_y - y))
-        mse = session.run(mse)
-
         accuracy = session.run(accuracy, feed_dict={self.input_holder: x,
                                                     self.y_holder: y})
         self.items_test += len(x)
         self.test_accuracy_history.append(accuracy)
 
+        # confusion_matrix_tf = tf.confusion_matrix(tf.argmax(self.nn_output, 1), tf.argmax(self.y_holder, 1))
+        # cm = confusion_matrix_tf.eval(feed_dict={self.input_holder: x, self.y_holder: y})
+        # confusion = tf.confusion_matrix(labels=self.y_holder, predictions=correct_pred, num_classes=6)
+        # print 'Confusion matrix:', session.run(confusion_matrix_tf, feed_dict={self.input_holder: x, self.y_holder: y})
         session.close()
 
     @property
     def il_node_num(self):
-        return self._il_node_num
+        return self.__il_node_num
 
     @il_node_num.setter
     def il_node_num(self, value):
         if value <= 0:
             raise ValueError('Input layer: Number of node must greater than 0')
         else:
-            self._il_node_num = value
+            self.__il_node_num = value
 
     @property
     def hl1_node_num(self):
-        return self._hl1_node_num
+        return self.__hl1_node_num
 
     @hl1_node_num.setter
     def hl1_node_num(self, value):
         if value <= 0:
             raise ValueError('Hidden layer 1: Number of node must greater than 0')
         else:
-            self._hl1_node_num = value
+            self.__hl1_node_num = value
 
     @property
     def hl2_node_num(self):
-        return self._hl2_node_num
+        return self.__hl2_node_num
 
     @hl2_node_num.setter
     def hl2_node_num(self, value):
         if value <= 0:
             raise ValueError('Hidden layer 2: Number of node must greater than 0')
         else:
-            self._hl2_node_num = value
+            self.__hl2_node_num = value
 
     @property
     def hl3_node_num(self):
-        return self._hl3_node_num
+        return self.__hl3_node_num
 
     @hl3_node_num.setter
     def hl3_node_num(self, value):
         if value <= 0:
             raise ValueError('Hidden layer 3: Number of node must greater than 0')
         else:
-            self._hl3_node_num = value
+            self.__hl3_node_num = value
 
     @property
     def ol_node_num(self):
-        return self._ol_node_num
+        return self.__ol_node_num
 
     @ol_node_num.setter
     def ol_node_num(self, value):
         if value <= 0:
             raise ValueError('Output layer: Number of node must greater than 0')
         else:
-            self._ol_node_num = value
+            self.__ol_node_num = value
 
     @property
     def batch_size(self):
-        return self._batch_size
+        return self.__mini_batch_size
 
     @batch_size.setter
     def batch_size(self, value):
         if value <= 0:
             raise ValueError('Batch size must greater than 0')
         else:
-            self._batch_size = value
+            self.__mini_batch_size = value
 
     @property
     def max_node_of_layers(self):
@@ -422,14 +516,14 @@ class NeuronNetwork(object):
 
     @property
     def epoch(self):
-        return self._epoch
+        return self.__epoch
 
     @epoch.setter
     def epoch(self, value):
         if value <= 0:
             raise ValueError('Epoch must greater than 0')
         else:
-            self._epoch = value
+            self.__epoch = value
 
     @property
     def label_count(self):
@@ -440,5 +534,12 @@ class NeuronNetwork(object):
         return self.__number_of_features
 
     @property
-    def KFOLD(self):
-        return 3
+    def kfold(self):
+        return self.__kfold
+
+    @kfold.setter
+    def kfold(self, value):
+        if 0 < value <= 5:
+            self.__kfold = value
+        else:
+            raise ValueError('Cross validation should be from 1 to 5')

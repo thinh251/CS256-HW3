@@ -53,9 +53,23 @@ if __name__ == "__main__":
     # print 'Output:', outputs
 
     inputs, outputs = util.load_test_data('data_folder')
+    if not inputs or not outputs:
+        raise ValueError('Input data and output data cannot be empty')
+        # exit(0)
     nn = NeuronNetwork(inputs, outputs, 0.01)
+    # set the number of node for input layer
+    nn.il_node_num = 8
+    # set the number of node for hidden layer 1
+    nn.hl1_node_num = 3
+    # set the number of node for hidden layer 2
+    nn.hl2_node_num = 6
+    # set the number of node for hidden layer 3
+    nn.hl3_node_num = 2
+    # set the number of node for out layer
+    nn.ol_node_num = 1
+
     nn.batch_size = 128
     nn.epoch = 5
-    nn.start('train', 'model_thinh.txt', 'data_folder')
-    # nn.start('test', 'model_thinh.txt', 'data_folder')
-    # nn.start('5fold', 'model_file', 'data_folder')
+    # nn.start('train', 'model_thinh.txt')
+    # nn.start('test', 'model_thinh.txt')
+    nn.start('5fold', 'model_file')
