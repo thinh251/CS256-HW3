@@ -3,6 +3,7 @@ import sys
 import util
 
 gene_len = 40
+
 if len(sys.argv) < 5:
     sys.exit("gene_snippet_generator takes 5 arguments.")
 try:
@@ -46,7 +47,6 @@ for i in range(num_snippets):
             gene_code_str = gene_code_str[:j] + letter + gene_code_str[j+1:]
     output = output + gene_code_str+'\n'
 
-print output
 F = open(output_file,'w')
 F.write(''.join(output))
 F.close()
