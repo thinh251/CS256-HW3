@@ -31,8 +31,8 @@ if __name__ == "__main__":
     # if not inputs or not outputs:
     #     raise ValueError('Input data and output data cannot be empty')
     #     # exit(0)
-    inputs, outputs = util.load_test_data('Train_1')
-    # inputs, outputs = util.load_test_data('Test_1')
+    # inputs, outputs = util.load_test_data('Train_1')
+    inputs, outputs = util.load_test_data('Test_1')
     nn = NeuronNetwork(inputs, outputs, 0.01)
     # set the number of node for input layer
     nn.il_node_num = 5

@@ -77,8 +77,10 @@ def read_data(data_folder):
             # check the text and label it
             with open(f) as text_file:
                 for line in text_file:
-                    lines.append(line.rstrip('\n'))
-                    t = determine_sticky(line)
+                    snippet = line.rstrip('\n')
+                    lines.append(snippet)
+                    # t = determine_sticky(snippet)
+                    t = sticky_type(snippet)
                     lines.append(t)
                     # TODO:
                     something.append(lines)
