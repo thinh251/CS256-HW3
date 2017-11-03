@@ -109,9 +109,8 @@ class NeuronNetwork(object):
                                 self.bias['b4'])
         hidden_layer_3 = tf.nn.relu(hidden_layer_3)
 
-        output_layer = tf.matmul(hidden_layer_3, self.weights['w5']) + \
-                       self.bias['b5']
-        return output_layer
+        output_layer = tf.matmul(hidden_layer_3, self.weights['w5']) + self.bias['b5']
+        return tf.nn.softmax(output_layer)
 
     # def start(self, mode, model_file.txt, train_data):
     def start(self, mode, model_file):
@@ -176,7 +175,8 @@ class NeuronNetwork(object):
                     pass
                     # print 'End of the list when shuffling'
 
-            # slice the training data into mini batches and train on these batches
+            # slice the training data into mini batches and train on
+            # these batches
             for k in range(0, len(train_x), self.batch_size):
                 batch_x = train_x[k:k + self.batch_size]
                 batch_y = train_y[k:k + self.batch_size]
@@ -194,13 +194,14 @@ class NeuronNetwork(object):
                                            self.y_holder: batch_y})
 
                 self.items_trained += len(train_x)
-                # The homework does not require to calculate the training accuracy
-                # self.train_accuracy_history.append(accuracy)
+                # The homework does not require to calculate the
+                # training accuracy
+                self.train_accuracy_history.append(accuracy)
                 items_count += len(batch_x)
                 jp = items_count / 1000
                 if items_count > (grand * 1000) and not is_printed:
                     print str(items_count - (
-                    items_count % 1000)) + ' items processed'
+                        items_count % 1000)) + ' items processed'
                     is_printed = True
                     grand += 1
                 elif jp >= grand:
@@ -210,7 +211,9 @@ class NeuronNetwork(object):
         print 'Save to file'
         saver = tf.train.Saver(
             [self.weights['w1'], self.weights['w2'], self.weights['w3'],
-             self.weights['w4'], self.weights['w5']])
+             self.weights['w4'], self.weights['w5'], self.bias['b1'],
+             self.bias['b2'], self.bias['b3'], self.bias['b4'],
+             self.bias['b5']])
         saver.save(session, model_file)
         print 'W5-trained:\n', session.run(self.weights['w5'])
         # print 'b1-trained:\n', session.run(self.bias['b1'])
@@ -326,12 +329,14 @@ class NeuronNetwork(object):
         session = tf.Session()
         init = tf.global_variables_initializer()
         session.run(init)
-        # Load checkpoint file which is saved from training step
+        # Load model file which is saved from training step
         # saver = tf.train.import_meta_graph(model_file + '.meta')
         # saver.restore(session, tf.train.latest_checkpoint('./'))
         saver = tf.train.Saver([self.weights['w1'], self.weights['w2'],
                                 self.weights['w3'], self.weights['w4'],
-                                self.weights['w5']])
+                                self.weights['w5'], self.bias['b1'],
+                                self.bias['b2'], self.bias['b3'],
+                                self.bias['b4'], self.bias['b5']])
         saver.restore(session, model_file)
         # print 'b1: \n', session.run('b1:0')
 
@@ -343,11 +348,11 @@ class NeuronNetwork(object):
         self.weights['w5'].assign(session.run('w5:0'))
         print 'Weights:', session.run(self.weights['w5'])
         # Assign the biases which are loaded from model file
-        # self.bias['b1'].assign(session.run('b1:0'))
-        # self.bias['b2'].assign(session.run('b2:0'))
-        # self.bias['b3'].assign(session.run('b3:0'))
-        # self.bias['b4'].assign(session.run('b4:0'))
-        # self.bias['b5'].assign(session.run('b5:0'))
+        self.bias['b1'].assign(session.run('b1:0'))
+        self.bias['b2'].assign(session.run('b2:0'))
+        self.bias['b3'].assign(session.run('b3:0'))
+        self.bias['b4'].assign(session.run('b4:0'))
+        self.bias['b5'].assign(session.run('b5:0'))
 
         correct_pred = tf.equal(tf.argmax(self.nn_output, 1),
                                 tf.argmax(self.y_holder, 1))
