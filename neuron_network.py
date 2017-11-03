@@ -32,9 +32,8 @@ class NeuronNetwork(object):
         # Hold the output_data for training and testing
         self.y_holder = tf.placeholder(tf.float32, [None, self.label_count],
                                        name='output-holder')
-        self.__define_weight_bias()
         # Neuron network output_data
-        self.nn_output = self.__build_network()
+        self.nn_output = None
         self.test_accuracy_history = []
         self.train_accuracy_history = []
         self.items_trained = 0
@@ -89,7 +88,8 @@ class NeuronNetwork(object):
                                   maxval=1, dtype=tf.float32), name='b5')
         }
 
-    def __build_network(self):
+    def build_network(self):
+        self.__define_weight_bias()
         """ Define 5 layers for this homework.
             x is input_texts, w: weight, b: bias
         """
@@ -110,7 +110,9 @@ class NeuronNetwork(object):
         hidden_layer_3 = tf.nn.relu(hidden_layer_3)
 
         output_layer = tf.matmul(hidden_layer_3, self.weights['w5']) + self.bias['b5']
-        return tf.nn.softmax(output_layer)
+        self.nn_output = output_layer
+        return self.nn_output
+        # return tf.nn.softmax(output_layer)
 
     # def start(self, mode, model_file.txt, train_data):
     def start(self, mode, model_file):
@@ -122,6 +124,7 @@ class NeuronNetwork(object):
             print 'Processing completed:\n',
             print self.items_trained, 'item(s) trained,'
             print 'Training time: ', datetime.now() - start_time
+            print 'Training accuracy:', np.mean(self.train_accuracy_history)
         elif mode == '5fold':
             print 'Start cross-validation...'
             training_time, testing_time = self.cross_validate(
@@ -188,15 +191,18 @@ class NeuronNetwork(object):
                                         tf.argmax(self.y_holder, 1))
                 accuracy = tf.reduce_mean(
                     tf.cast(correct_pred, tf.float32))
-                accuracy = session.run(accuracy,
-                                       feed_dict={
-                                           self.input_holder: batch_x,
-                                           self.y_holder: batch_y})
+                # lost, acc = session.run([cost, accuracy], feed_dict={
+                #     self.input_holder: batch_x, self.y_holder: batch_y})
+                # print 'Epoch ', e
+                # print 'Cost / Accuracy:', lost, acc
+                acc = session.run(accuracy, feed_dict=
+                {self.input_holder: batch_x, self.y_holder: batch_y})
 
                 self.items_trained += len(train_x)
                 # The homework does not require to calculate the
                 # training accuracy
-                self.train_accuracy_history.append(accuracy)
+                # print'Training accuracy:', accuracy
+                self.train_accuracy_history.append(acc)
                 items_count += len(batch_x)
                 jp = items_count / 1000
                 if items_count > (grand * 1000) and not is_printed:
@@ -207,6 +213,7 @@ class NeuronNetwork(object):
                 elif jp >= grand:
                     is_printed = False
 
+
         # Save the optimized weights and the biases to the model file
         print 'Save to file'
         saver = tf.train.Saver(
@@ -216,7 +223,7 @@ class NeuronNetwork(object):
              self.bias['b5']])
         saver.save(session, model_file)
         print 'W5-trained:\n', session.run(self.weights['w5'])
-        # print 'b1-trained:\n', session.run(self.bias['b1'])
+        print 'b1-trained:\n', session.run(self.bias['b1'])
         session.close()
         self.items_trained = items_count
 
@@ -353,24 +360,26 @@ class NeuronNetwork(object):
         self.bias['b3'].assign(session.run('b3:0'))
         self.bias['b4'].assign(session.run('b4:0'))
         self.bias['b5'].assign(session.run('b5:0'))
+        print 'b1-loaded:\n', session.run(self.bias['b1'])
+        prediction = tf.nn.softmax(self.nn_output)
 
-        correct_pred = tf.equal(tf.argmax(self.nn_output, 1),
+        correct_pred = tf.equal(tf.argmax(prediction, 1),
                                 tf.argmax(self.y_holder, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-        accuracy = session.run(accuracy, feed_dict={self.input_holder: x,
+        acc_rate = session.run(accuracy, feed_dict={self.input_holder: x,
                                                     self.y_holder: y})
         self.items_test += len(x)
-        self.test_accuracy_history.append(accuracy)
-        print 'Inside test accuracy:', accuracy
-        confusion_matrix_tf = tf.confusion_matrix(tf.argmax(self.nn_output, 1),
-                                                  tf.argmax(self.y_holder, 1))
+        self.test_accuracy_history.append(acc_rate)
+        print 'Inside test accuracy:', acc_rate
+        # confusion_matrix_tf = tf.confusion_matrix(tf.argmax(self.nn_output, 1),
+        #                                           tf.argmax(self.y_holder, 1))
         # cm = confusion_matrix_tf.eval(feed_dict={self.input_holder: x,
         # self.y_holder: y})
-        # confusion = tf.confusion_matrix(labels=self.y_holder,
-        # predictions=correct_pred, num_classes=6)
-        print 'Confusion matrix:', session.run(confusion_matrix_tf,
-                                               feed_dict={self.input_holder: x,
-                                                          self.y_holder: y})
+        # cf = tf.confusion_matrix(labels=self.y_holder,
+        #                          predictions=correct_pred, num_classes=6)
+        # print 'Confusion matrix:', session.run(cf,
+        #                                        feed_dict={self.input_holder: x,
+        #                                                   self.y_holder: y})
         session.close()
 
     @property
