@@ -38,6 +38,7 @@ def sticky_type(input):
 
 
 def sticky_index(k):
+    """ To find out stickiness """
     if k == 0: return sticky_def['NON']
     if k in [1, 2]: return sticky_def['12']
     if k in [3, 4]: return sticky_def['34']
@@ -49,7 +50,7 @@ def sticky_index(k):
 
 
 def mutation(letter):
-    """returns a mutation for a letter randomly among the other letters"""
+    """ returns a mutation for a letter randomly among the other letters """
     letters = "ABCD"
     random_index = np.random.randint(3)
     return letters.replace(letter, "")[random_index]
