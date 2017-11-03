@@ -18,4 +18,3 @@ import tensorflow as tf
 x = tf.constant([[1,2],[3,4],[5,6]], tf.float32, shape=(3,2), name='X', verify_shape=(2, 3))
 session = tf.Session()
 session.run(x)
-
