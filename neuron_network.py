@@ -216,45 +216,6 @@ class NeuronNetwork(object):
         # print 'b1-trained:\n', session.run(self.bias['b1'])
         session.close()
         self.items_trained = items_count
-        # region This is our first naive approach to save model file using numpy
-        # which requires to manipulate the matrices dimenssions
-        # np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
-        # # 5 layers
-        # # print("Current W: ")
-        # w_matrix = np.zeros((5, self.max_node_of_layers, self.number_of_features), dtype=float)
-        # # print "Initiated w_matrix:", w_matrix
-        # key_list = self.weights.keys()
-        # key_list.sort()
-        # i = 0
-        # for w in key_list:  # 5 layers
-        #     layer_w = np.array(self.weights[w].eval(session=session))
-        #     layer_w_t = layer_w.T
-        #     # print 'Layer: ', w, 'Shape: ', np.shape(layer_w_t)
-        #     d = self.number_of_features
-        #     if w == 'w2':
-        #         d = self.il_node_num
-        #     elif w == 'w3':
-        #         d = self.hl1_node_num
-        #     elif w == 'w4':
-        #         d = self.hl2_node_num
-        #     elif w == 'w5':
-        #         d = self.hl3_node_num
-        #     it = np.nditer(layer_w_t, flags=['f_index'])
-        #     while not it.finished:
-        #         r = it.index / d
-        #         c = it.index % d
-        #         w_matrix[i][r][c] = it[0]
-        #         it.iternext()
-        #     i += 1
-        # print w_matrix
-        # with open(model_file, 'w') as f:
-        #     s = 1
-        #     for data_slice in w_matrix:
-        #         f.write('#w' + str(s) + '\n')
-        #         np.savetxt(f, data_slice, fmt='%2.3f')
-        #         s += 1
-        # session.close()
-        # endregion
 
     def cross_validate(self, x, y, k, model_file):
         # Clear the history
