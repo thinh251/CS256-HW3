@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 import random
 import os
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
@@ -144,7 +145,7 @@ class NeuronNetwork(object):
                 except ValueError:
                     pass
                     # print 'End of the list when shuffling'
-            
+
             # slice the training data into mini batches and train on these batches
             for k in range(0, len(train_x), self.batch_size):
                 batch_x = train_x[k:k + self.batch_size]
