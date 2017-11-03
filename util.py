@@ -70,24 +70,22 @@ def check_line_length(text_file, n):
 
 def read_data(data_folder):
     files = glob.glob(data_folder)
-    something = []
-    lines = []
+    snippets = []
+    labels = []
     for f in files:
         if os.path.isfile(f) and check_line_length(f, 40):
             # check the text and label it
             with open(f) as text_file:
                 for line in text_file:
                     snippet = line.rstrip('\n')
-                    lines.append(snippet)
-                    # t = determine_sticky(snippet)
-                    t = sticky_type(snippet)
-                    lines.append(t)
-                    # TODO:
-                    something.append(lines)
+                    snippets.append(snippet)
+                    t = determine_sticky(snippet)
+                    # t = sticky_type(snippet)
+                    labels.append(t)
             print 'All the data in ', f, ' file are loaded'
         else:
             print 'The snippet length is not correct in ', f
-    return something
+    return snippets, labels
 
 
 def string_to_ascii(text):
@@ -117,12 +115,12 @@ def numberize_output_label(text):
 # loads data from the file
 def load_test_data(data_folder):
     path = os.path.curdir + '/' + data_folder + '/*.txt'
-    test_data = read_data(path)
+    snippets, labels = read_data(path)
     test_x = []
     test_y = []
-    for t in test_data:
-        text = t[0]
-        label = t[1]
+    for t in range(len(snippets)):
+        text = snippets[t]
+        label = labels[t]
         features = string_to_ascii(text)
         test_x.append(features)
         output = numberize_output_label(label)
@@ -140,7 +138,7 @@ def determine_sticky(input_str):
     # w_reverse = w[::-1]  # reverse w
     k = 1
     is_stick = True
-    while is_stick and k <= len(input_str) / 2:
+    while is_stick and k <= 9:
         u = input_str[:k]
         v_len = len(input_str) - 2 * k
         w = input_str[v_len + k:]
@@ -151,8 +149,11 @@ def determine_sticky(input_str):
 
     if k == 1:
         return sticky_def['NON']
-    elif k < len(input_str) / 2:
-        return str(k - 1) + str(k) + '-STICKY'
+    elif k < 9:
+        if k % 2 == 0:
+            return str(k - 1) + str(k) + '-STICKY'
+        else:
+            return str(k) + str(k + 1) + '-STICKY'
     else:
         return 'STICK_PALINDROME'
 

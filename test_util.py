@@ -11,10 +11,9 @@ import tensorflow as tf
 
 # print net.il_node_num, net.hl2_node_num
 
-#test_data = util.load_test_data('train_data')
-#print test_data
+test_x, test_y = util.load_test_data('UnitTest')
+print test_x
+print test_y
 # x = tf.placeholder(tf.float32, shape=(3, 3))
 
-x = tf.constant([[1,2],[3,4],[5,6]], tf.float32, shape=(3,2), name='X', verify_shape=(2, 3))
-session = tf.Session()
-session.run(x)
+
