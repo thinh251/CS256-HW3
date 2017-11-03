@@ -11,7 +11,7 @@ import tensorflow as tf
 
 # print net.il_node_num, net.hl2_node_num
 
-#test_data = util.load_test_data('data_folder')
+#test_data = util.load_test_data('train_data')
 #print test_data
 # x = tf.placeholder(tf.float32, shape=(3, 3))
 
