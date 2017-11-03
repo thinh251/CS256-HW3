@@ -19,11 +19,15 @@ def validate_arguments(arguments):
 
 
 if __name__ == "__main__":
-
+    train_data = ''
+    model_file = ''
+    mode = ''
     if validate_arguments(sys.argv):
         train_data = sys.argv[3]
         model_file = sys.argv[2]
         mode = sys.argv[1]
+    else :
+        sys.exit("Invalid Arguments")
     inputs, outputs = util.load_test_data(train_data)
     # inputs, outputs = util.load_test_data('test_data')
 
