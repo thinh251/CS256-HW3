@@ -1,7 +1,4 @@
-import string
 import sys
-import os
-import numpy as np
 import util
 from neuron_network import NeuronNetwork
 
@@ -19,16 +16,18 @@ def validate_arguments(arguments):
 
 
 if __name__ == "__main__":
-    #
-    # if validate_arguments(sys.argv):
-    #     train_data = sys.argv[3]
-    #     model_file = sys.argv[2]
-    #     mode = sys.argv[1]
-    # inputs, outputs = util.load_test_data(train_data)
-    # inputs, outputs = util.load_test_data('test_data')
 
-    # inputs, outputs = util.load_test_data('Train_1')
-    inputs, outputs = util.load_test_data('Test_1')
+    train_data = ''
+    model_file = ''
+    mode = ''
+    if validate_arguments(sys.argv):
+        train_data = sys.argv[3]
+        model_file = sys.argv[2]
+        mode = sys.argv[1]
+    else:
+        sys.exit("Invalid Arguments")
+    inputs, outputs = util.load_test_data(train_data)
+
     if not inputs or not outputs:
         raise ValueError('Input data and output data cannot be empty')
         # exit(0)
@@ -45,6 +44,4 @@ if __name__ == "__main__":
     nn.ol_node_num = 1
     nn.batch_size = 128
     nn.epoch = 5
-    mode = 'test'
-    model_file = 'model_file'
     nn.start(mode, model_file)
