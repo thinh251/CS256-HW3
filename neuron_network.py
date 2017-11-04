@@ -215,15 +215,15 @@ class NeuronNetwork(object):
 
 
         # Save the optimized weights and the biases to the model file
-        print 'Save to file'
+        # print 'Save to file'
         saver = tf.train.Saver(
             [self.weights['w1'], self.weights['w2'], self.weights['w3'],
              self.weights['w4'], self.weights['w5'], self.bias['b1'],
              self.bias['b2'], self.bias['b3'], self.bias['b4'],
              self.bias['b5']])
         saver.save(session, model_file)
-        print 'W5-trained:\n', session.run(self.weights['w5'])
-        print 'b1-trained:\n', session.run(self.bias['b1'])
+        # print 'W5-trained:\n', session.run(self.weights['w5'])
+        # print 'b1-trained:\n', session.run(self.bias['b1'])
         session.close()
         self.items_trained = items_count
 
@@ -353,14 +353,14 @@ class NeuronNetwork(object):
         self.weights['w3'].assign(session.run('w3:0'))
         self.weights['w4'].assign(session.run('w4:0'))
         self.weights['w5'].assign(session.run('w5:0'))
-        print 'Weights:', session.run(self.weights['w5'])
+        # print 'Weights:', session.run(self.weights['w5'])
         # Assign the biases which are loaded from model file
         self.bias['b1'].assign(session.run('b1:0'))
         self.bias['b2'].assign(session.run('b2:0'))
         self.bias['b3'].assign(session.run('b3:0'))
         self.bias['b4'].assign(session.run('b4:0'))
         self.bias['b5'].assign(session.run('b5:0'))
-        print 'b1-loaded:\n', session.run(self.bias['b1'])
+        # print 'b1-loaded:\n', session.run(self.bias['b1'])
         prediction = tf.nn.softmax(self.nn_output)
 
         correct_pred = tf.equal(tf.argmax(prediction, 1),
