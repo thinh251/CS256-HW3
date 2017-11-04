@@ -3,7 +3,7 @@ import util
 from neuron_network import NeuronNetwork
 
 supported_mode = ['train', '5fold', 'test']
-
+BATCH_SIZE = 128
 
 def validate_arguments(arguments):
     if len(arguments) < 4:
@@ -28,7 +28,7 @@ if __name__ == "__main__":
          sys.exit("Invalid Arguments")
     inputs, outputs = util.load_test_data(train_data)
 
-    nn = NeuronNetwork(inputs, outputs, 0.01)
+    nn = NeuronNetwork(inputs, outputs)
     # set the number of node for input layer
     nn.il_node_num = 10
     # set the number of node for hidden layer 1
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     nn.hl3_node_num = 10
     # set the number of node for out layer
     nn.ol_node_num = 1
-    nn.batch_size = 128
-    nn.epoch = 5
+    nn.batch_size = BATCH_SIZE
+    nn.epoch = 10
     nn.build_network()
     nn.start(mode, model_file)
