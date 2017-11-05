@@ -199,8 +199,6 @@ class NeuronNetwork(object):
                 {self.input_holder: batch_x, self.y_holder: batch_y})
 
                 self.items_trained += len(train_x)
-                # The homework does not require to calculate the
-                # training accuracy
                 # print'Training accuracy:', accuracy
                 self.train_accuracy_history.append(acc)
                 items_count += len(batch_x)
@@ -222,8 +220,8 @@ class NeuronNetwork(object):
              self.bias['b2'], self.bias['b3'], self.bias['b4'],
              self.bias['b5']])
         saver.save(session, model_file)
-        print 'W5-trained:\n', session.run(self.weights['w5'])
-        print 'b1-trained:\n', session.run(self.bias['b1'])
+        # print 'W5-trained:\n', session.run(self.weights['w5'])
+        # print 'b1-trained:\n', session.run(self.bias['b1'])
         session.close()
         self.items_trained = items_count
 
@@ -353,14 +351,14 @@ class NeuronNetwork(object):
         self.weights['w3'].assign(session.run('w3:0'))
         self.weights['w4'].assign(session.run('w4:0'))
         self.weights['w5'].assign(session.run('w5:0'))
-        print 'Weights:', session.run(self.weights['w5'])
+        # print 'Weights:', session.run(self.weights['w5'])
         # Assign the biases which are loaded from model file
         self.bias['b1'].assign(session.run('b1:0'))
         self.bias['b2'].assign(session.run('b2:0'))
         self.bias['b3'].assign(session.run('b3:0'))
         self.bias['b4'].assign(session.run('b4:0'))
         self.bias['b5'].assign(session.run('b5:0'))
-        print 'b1-loaded:\n', session.run(self.bias['b1'])
+        # print 'b1-loaded:\n', session.run(self.bias['b1'])
         prediction = tf.nn.softmax(self.nn_output)
 
         correct_pred = tf.equal(tf.argmax(prediction, 1),
@@ -370,13 +368,13 @@ class NeuronNetwork(object):
                                                     self.y_holder: y})
         self.items_test += len(x)
         self.test_accuracy_history.append(acc_rate)
-        print 'Inside test accuracy:', acc_rate
+        # print 'Inside test accuracy:', acc_rate
         # confusion_matrix_tf = tf.confusion_matrix(tf.argmax(self.nn_output, 1),
         #                                           tf.argmax(self.y_holder, 1))
-        # cm = confusion_matrix_tf.eval(feed_dict={self.input_holder: x,
-        # self.y_holder: y})
-        # cf = tf.confusion_matrix(labels=self.y_holder,
-        #                          predictions=correct_pred, num_classes=6)
+        # # cm = confusion_matrix_tf.eval(feed_dict={self.input_holder: x,
+        # # self.y_holder: y})
+        # # cf = tf.confusion_matrix(labels=self.y_holder,
+        # #                          predictions=correct_pred, num_classes=6)
         # print 'Confusion matrix:', session.run(cf,
         #                                        feed_dict={self.input_holder: x,
         #                                                   self.y_holder: y})
