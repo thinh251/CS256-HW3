@@ -213,7 +213,7 @@ class NeuronNetwork(object):
 
 
         # Save the optimized weights and the biases to the model file
-        print 'Save to file'
+        # print 'Save to file'
         saver = tf.train.Saver(
             [self.weights['w1'], self.weights['w2'], self.weights['w3'],
              self.weights['w4'], self.weights['w5'], self.bias['b1'],

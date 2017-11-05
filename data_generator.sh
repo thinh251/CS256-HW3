@@ -1,4 +1,4 @@
-rm -r Train_1
+rm -rf Train_1
 mkdir Train_1
 python sticky_snippet_generator.py 2500 0 1 out1.txt
 python sticky_snippet_generator.py 2500 0 2 out2.txt
@@ -21,7 +21,7 @@ cat out1.txt out2.txt > ./Train_1/file6.txt
 rm out1.txt
 rm out2.txt
 
-rm -r Train_2
+rm -rf Train_2
 mkdir Train_2
 python sticky_snippet_generator.py 5000 0 1 out1.txt
 python sticky_snippet_generator.py 5000 0 2 out2.txt
@@ -45,7 +45,7 @@ rm out1.txt
 rm out2.txt
 
 
-rm -r Train_3
+rm -rf Train_3
 mkdir Train_3
 python sticky_snippet_generator.py 10000 0 1 out1.txt
 python sticky_snippet_generator.py 10000 0 2 out2.txt
@@ -68,7 +68,7 @@ cat out1.txt out2.txt > ./Train_3/file6.txt
 rm out1.txt
 rm out2.txt
 
-rm -r Train_4
+rm -rf Train_4
 mkdir Train_4
 python sticky_snippet_generator.py 60000 0 20 out.txt
 mv out.txt  ./Train_4/file.txt
@@ -76,7 +76,7 @@ mv out.txt  ./Train_4/file.txt
 echo "Train Data Generated"
 
 
-rm -r Test_1
+rm -rf Test_1
 mkdir Test_1
 python sticky_snippet_generator.py 2500 0.2 1 out1.txt
 python sticky_snippet_generator.py 2500 0.2 2 out2.txt
@@ -99,7 +99,7 @@ cat out1.txt out2.txt > ./Test_1/file6.txt
 rm out1.txt
 rm out2.txt
 
-rm -r Test_2
+rm -rf Test_2
 mkdir Test_2
 python sticky_snippet_generator.py 2500 0.4 1 out1.txt
 python sticky_snippet_generator.py 2500 0.4 2 out2.txt
@@ -126,7 +126,7 @@ rm out2.txt
 
 
 
-rm -r Test_3
+rm -rf Test_3
 mkdir Test_3
 python sticky_snippet_generator.py 2500 0.6 1 out1.txt
 python sticky_snippet_generator.py 2500 0.6 2 out2.txt
